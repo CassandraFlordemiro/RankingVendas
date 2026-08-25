@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ranking de Vendas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="ranking-container">
+        <!-- Cabeçalho do Ranking -->
+        <div class="header">
+            <div class="cabecalho-colunas">
+                <span>POS</span>
+                <span>CONSULTOR</span>
+                <span>VENDAS</span>
+            </div>
+        </div>
+        
+        <!-- Lista onde os consultores vão aparecer -->
+        <ul id="lista-ranking">
+            <!-- Exemplo de como um consultor vai ficar na estrutura -->
+            <li class="consultor-item">
+                <span class="posicao">1</span>
+                <div class="perfil">
+                    <div class="foto-placeholder"></div>
+                    <span class="nome">Consultor Exemplo</span>
+                </div>
+                <span class="vendas-numero">3</span>
+            </li>
+        </ul>
+    </div>
+    
+    <script type="module" src="script.js"></script>
+</body>
+</html>

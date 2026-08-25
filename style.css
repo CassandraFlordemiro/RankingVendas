@@ -1,0 +1,92 @@
+/* Reset básico de espaçamentos e tipografia */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #1a1b26; /* Cor de fundo da tela */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #ffffff;
+}
+
+/* Container Principal do Ranking */
+.ranking-container {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    width: 100%;
+    max-width: 400px;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    border: 1px solid #334155;
+}
+
+/* Cabeçalho (Pos, Consultor, Vendas) */
+.header {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #334155;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+/* Sistema de Grid para alinhar colunas perfeitamente */
+.cabecalho-colunas, .consultor-item {
+    display: grid;
+    grid-template-columns: 40px 1fr 60px;
+    align-items: center;
+}
+
+/* Ajustes da Lista e Linhas */
+#lista-ranking {
+    list-style: none;
+}
+
+.consultor-item {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.consultor-item:last-child {
+    border-bottom: none;
+}
+
+/* Estilização Individual dos Elementos */
+.posicao {
+    font-size: 1.1rem;
+    color: #cbd5e1;
+    text-align: center;
+}
+
+.perfil {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Círculo provisório para a foto */
+.foto-placeholder {
+    width: 32px;
+    height: 32px;
+    background-color: #3b82f6; 
+    border-radius: 50%;
+}
+
+.nome {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #f8fafc;
+}
+
+.vendas-numero {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+    color: #f8fafc;
+}

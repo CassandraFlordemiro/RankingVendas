@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel da Supervisora</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="ranking-container">
+        <div class="header">
+            <h2>Painel de Controle</h2>
+        </div>
+        
+        <!-- Formulário para Novo Consultor -->
+        <div style="margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 20px;">
+            <h3 style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">ADICIONAR CONSULTOR</h3>
+            
+            <input type="text" id="novo-nome" placeholder="Nome do consultor..." style="padding: 10px; width: 100%; border-radius: 6px; border: none; margin-bottom: 10px; outline: none;">
+            
+            <label for="nova-foto" style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px;">Adicionar foto do consultor (Opcional):</label>
+            <input type="file" id="nova-foto" accept="image/*" style="padding: 10px; width: 100%; border-radius: 6px; border: none; margin-bottom: 15px; outline: none; background: #334155; color: #f8fafc; cursor: pointer;">
+            
+            <button id="btn-adicionar" style="padding: 10px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Cadastrar na Equipe</button>
+        </div>
+        
+        <!-- Área para Registrar Vendas -->
+        <div>
+            <h3 style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">REGISTRAR VENDAS (+1)</h3>
+            <ul id="lista-admin" style="list-style: none;">
+                <!-- Os consultores e os botões de adicionar venda vão aparecer aqui magicamente -->
+            </ul>
+        </div>
+
+        <!-- Botão para Zerar Ranking -->
+        <div style="margin-top: 25px; border-top: 1px solid #334155; padding-top: 20px;">
+            <button id="btn-zerar" style="padding: 10px; width: 100%; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Encerrar Ciclo (Zerar Vendas)</button>
+        </div>
+    </div>
+    
+    <script type="module" src="admin.js"></script>
+</body>
+</html>
