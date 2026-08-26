@@ -7,21 +7,50 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Overlay Escuro da Sidebar -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <!-- Barra Lateral (Drawer) -->
+    <aside id="sidebar-drawer" class="sidebar-drawer">
+        <div class="sidebar-header">
+            <h3>Menu de Gestão</h3>
+            <button id="btn-fechar-menu" class="btn-fechar-sidebar" title="Fechar">&times;</button>
+        </div>
+
+        <!-- Box de Cadastro de Consultor -->
+        <div class="box-cadastro-sidebar">
+            <h4 style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; letter-spacing: 0.05em; font-weight: 700;">NOVO CONSULTOR</h4>
+            
+            <input type="text" id="novo-nome" placeholder="Nome do consultor..." style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid #334155; margin-bottom: 10px; outline: none; background: #0f172a; color: #f8fafc; font-size: 0.9rem;">
+            
+            <label for="nova-foto" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 6px;">Foto do consultor (Opcional):</label>
+            <input type="file" id="nova-foto" accept="image/*" style="padding: 6px; width: 100%; border-radius: 6px; border: 1px solid #334155; margin-bottom: 14px; outline: none; background: #0f172a; color: #94a3b8; cursor: pointer; font-size: 0.75rem;">
+            
+            <button id="btn-adicionar" style="padding: 10px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s ease;">Cadastrar na Equipe</button>
+        </div>
+
+        <!-- Boxes Individuais dos Botões da Sidebar -->
+        <nav class="sidebar-nav-links">
+            <button class="nav-box-btn" id="btn-menu-historico">
+                <span style="font-size: 1.1rem;">📊</span>
+                <span>Consultar por Data</span>
+            </button>
+            <button class="nav-box-btn" id="btn-menu-usuarios">
+                <span style="font-size: 1.1rem;">⚙️</span>
+                <span>Gerenciar Usuários</span>
+            </button>
+            <button class="nav-box-btn btn-sair" id="btn-menu-logout">
+                <span style="font-size: 1.1rem;">🚪</span>
+                <span>Sair da Conta</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- Conteúdo Principal do Painel -->
     <div class="ranking-container admin-container">
         <div class="header">
             <h2>Painel de Controle</h2>
-        </div>
-        
-        <!-- Formulário para Novo Consultor -->
-        <div style="margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 20px;">
-            <h3 style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; letter-spacing: 0.05em;">ADICIONAR CONSULTOR</h3>
-            
-            <input type="text" id="novo-nome" placeholder="Nome do consultor..." style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid #334155; margin-bottom: 10px; outline: none; background: #0f172a; color: #f8fafc;">
-            
-            <label for="nova-foto" style="font-size: 0.78rem; color: #94a3b8; display: block; margin-bottom: 6px;">Adicionar foto do consultor (Opcional):</label>
-            <input type="file" id="nova-foto" accept="image/*" style="padding: 8px; width: 100%; border-radius: 6px; border: 1px solid #334155; margin-bottom: 15px; outline: none; background: #0f172a; color: #94a3b8; cursor: pointer;">
-            
-            <button id="btn-adicionar" style="padding: 10px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Cadastrar na Equipe</button>
+            <button id="btn-abrir-menu" class="btn-menu-lateral" title="Abrir Menu">☰</button>
         </div>
         
         <!-- Área para Registrar Vendas -->
@@ -34,7 +63,7 @@
 
         <!-- Botão para Zerar Ranking -->
         <div style="margin-top: 25px; border-top: 1px solid #334155; padding-top: 20px;">
-            <button id="btn-zerar" style="padding: 10px; width: 100%; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Encerrar Ciclo (Zerar Vendas)</button>
+            <button id="btn-zerar" style="padding: 10px; width: 100%; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">Encerrar Ciclo (Zerar Vendas)</button>
         </div>
     </div>
     

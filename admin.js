@@ -1,5 +1,6 @@
 // Importações diretas do Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Suas credenciais
@@ -13,14 +14,52 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Mapeando os elementos do HTML
+// Trava de Segurança: Se não estiver autenticado, expulsa para o login
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = "login.html";
+    }
+});
+
+// Mapeamento dos elementos DOM
 const listaAdmin = document.getElementById('lista-admin');
 const inputNovoNome = document.getElementById('novo-nome');
 const btnAdicionar = document.getElementById('btn-adicionar');
 
-// Função auxiliar para formatar a hora da última venda
+// Controle da Barra Lateral (Sidebar)
+const btnAbrirMenu = document.getElementById('btn-abrir-menu');
+const btnFecharMenu = document.getElementById('btn-fechar-menu');
+const sidebarDrawer = document.getElementById('sidebar-drawer');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const btnMenuLogout = document.getElementById('btn-menu-logout');
+
+function abrirSidebar() {
+    sidebarDrawer.classList.add('active');
+    sidebarOverlay.classList.add('active');
+}
+
+function fecharSidebar() {
+    sidebarDrawer.classList.remove('active');
+    sidebarOverlay.classList.remove('active');
+}
+
+btnAbrirMenu.addEventListener('click', abrirSidebar);
+btnFecharMenu.addEventListener('click', fecharSidebar);
+sidebarOverlay.addEventListener('click', fecharSidebar);
+
+// Ação de Logout
+btnMenuLogout.addEventListener('click', async () => {
+    const confirmacao = confirm("Deseja realmente sair do painel?");
+    if (confirmacao) {
+        await signOut(auth);
+        window.location.href = "login.html";
+    }
+});
+
+// Formatação do horário da última venda
 function formatarHora(timestamp) {
     if (!timestamp) return "Sem vendas hoje";
     const data = new Date(timestamp);
@@ -66,7 +105,6 @@ function carregarPainelAdmin() {
             listaAdmin.appendChild(li);
         });
 
-        // Ação para adicionar venda (+1)
         document.querySelectorAll('.btn-mais').forEach(botao => {
             botao.addEventListener('click', function() {
                 const idConsultor = this.getAttribute('data-id');
@@ -74,7 +112,6 @@ function carregarPainelAdmin() {
             });
         });
 
-        // Ação para remover venda (-1)
         document.querySelectorAll('.btn-menos').forEach(botao => {
             botao.addEventListener('click', function() {
                 const idConsultor = this.getAttribute('data-id');
@@ -88,7 +125,7 @@ function carregarPainelAdmin() {
     });
 }
 
-// 2. Função unificada para registrar ou remover vendas
+// 2. Registrar ou remover vendas
 async function registrarVenda(id, quantidade) {
     const consultorRef = doc(db, "consultores", id);
     const atualizacao = {
@@ -102,7 +139,7 @@ async function registrarVenda(id, quantidade) {
     await updateDoc(consultorRef, atualizacao);
 }
 
-// Motor para encolher a foto e transformá-la em texto Base64
+// Motor de compressão de imagem
 function processarImagem(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -148,7 +185,8 @@ btnAdicionar.addEventListener('click', async () => {
     });
 
     inputNovoNome.value = ""; 
-    document.getElementById('nova-foto').value = ""; 
+    document.getElementById('nova-foto').value = "";
+    fecharSidebar();
 });
 
 // 4. Encerrar ciclo

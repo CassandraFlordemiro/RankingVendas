@@ -14,6 +14,7 @@ body {
     min-height: 100vh;
     color: #ffffff;
     padding: 20px;
+    overflow-x: hidden;
 }
 
 /* Container Principal do Ranking e Painel */
@@ -25,6 +26,7 @@ body {
     padding: 20px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     border: 1px solid #334155;
+    position: relative;
 }
 
 /* Painel de Controle */
@@ -37,17 +39,163 @@ body {
     margin-bottom: 20px;
     padding-bottom: 12px;
     border-bottom: 1px solid #334155;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .cabecalho-colunas {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
     font-size: 0.75rem;
     color: #94a3b8;
     font-weight: 600;
     letter-spacing: 0.05em;
     padding: 0 10px;
+}
+
+/* Botão do Menu Hambúrguer */
+.btn-menu-lateral {
+    background: #334155;
+    border: 1px solid #475569;
+    color: #f8fafc;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-menu-lateral:hover {
+    background: #475569;
+    transform: scale(1.05);
+}
+
+/* Overlay de Fundo Escuro */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Drawer Lateral (Sidebar) */
+.sidebar-drawer {
+    position: fixed;
+    top: 0;
+    left: -360px;
+    width: 330px;
+    height: 100vh;
+    background: #0f172a;
+    border-right: 1px solid #334155;
+    z-index: 999;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 20px;
+    transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+}
+
+.sidebar-drawer.active {
+    left: 0;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #334155;
+    margin-bottom: 20px;
+}
+
+.sidebar-header h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.btn-fechar-sidebar {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.4rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.btn-fechar-sidebar:hover {
+    color: #ffffff;
+}
+
+/* Box de Cadastro de Consultor */
+.box-cadastro-sidebar {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+/* Boxes dos Links da Sidebar */
+.sidebar-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nav-box-btn {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    color: #f8fafc;
+    text-align: left;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background 0.2s ease;
+}
+
+.nav-box-btn:hover {
+    transform: scale(1.02);
+    border-color: #475569;
+    background: rgba(30, 41, 59, 0.95);
+}
+
+.nav-box-btn.btn-sair {
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.nav-box-btn.btn-sair:hover {
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.12);
 }
 
 /* Listas base */
@@ -59,7 +207,7 @@ body {
     position: relative;
 }
 
-/* Estrutura unificada de cards */
+/* Estrutura unificada de cards com efeito hover de expansão suave */
 .card-consultor {
     display: flex;
     justify-content: space-between;
@@ -68,19 +216,21 @@ body {
     border: 1px solid #334155;
     border-radius: 10px;
     padding: 12px 14px;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
     will-change: transform;
 }
 
 .card-consultor:hover {
     border-color: #475569;
+    transform: scale(1.02);
 }
 
-/* Efeito de destaque para quem pontua (Verde) */
+/* Animações de pulso */
 @keyframes pulsoVenda {
     0% {
         border-color: #22c55e;
         box-shadow: 0 0 18px rgba(34, 197, 94, 0.5);
-        transform: scale(1.02);
+        transform: scale(1.03);
     }
     100% {
         border-color: #334155;
@@ -89,7 +239,6 @@ body {
     }
 }
 
-/* Efeito de destaque para quem é ultrapassado (Vermelho) */
 @keyframes pulsoQueda {
     0% {
         border-color: #ef4444;
@@ -149,7 +298,7 @@ body {
 
 .consultor-detalhes .nome {
     font-size: 0.95rem;
-    font-weight: bold;
+    font-weight: 600;
     color: #f8fafc;
 }
 
@@ -158,7 +307,6 @@ body {
     color: #94a3b8;
 }
 
-/* Número de Vendas */
 .vendas-destaque {
     font-size: 1.2rem;
     font-weight: 700;
@@ -187,7 +335,7 @@ body {
     font-weight: bold;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: opacity 0.15s ease;
+    transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .btn-menos {
@@ -206,6 +354,7 @@ body {
 
 .btn-menos:hover:not(:disabled), .btn-mais:hover {
     opacity: 0.9;
+    transform: scale(1.05);
 }
 
 .contador-vendas {
