@@ -7,86 +7,195 @@
 }
 
 body {
-    background-color: #1a1b26; /* Cor de fundo da tela */
+    background-color: #1a1b26;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     color: #ffffff;
+    padding: 20px;
 }
 
-/* Container Principal do Ranking */
+/* Container Principal do Ranking e Painel */
 .ranking-container {
     background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
     width: 100%;
-    max-width: 400px;
+    max-width: 440px;
     border-radius: 16px;
     padding: 20px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     border: 1px solid #334155;
 }
 
-/* Cabeçalho (Pos, Consultor, Vendas) */
+/* Painel de Controle com mais respiro horizontal */
+.admin-container {
+    max-width: 500px;
+}
+
+/* Cabeçalho */
 .header {
-    margin-bottom: 15px;
-    padding-bottom: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
     border-bottom: 1px solid #334155;
+}
+
+.cabecalho-colunas {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 0.75rem;
     color: #94a3b8;
     font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 0 10px;
 }
 
-/* Sistema de Grid para alinhar colunas perfeitamente */
-.cabecalho-colunas, .consultor-item {
-    display: grid;
-    grid-template-columns: 40px 1fr 60px;
-    align-items: center;
-}
-
-/* Ajustes da Lista e Linhas */
-#lista-ranking {
+/* Listas base para ambos os painéis */
+#lista-ranking, #lista-admin {
     list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
 }
 
-.consultor-item {
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+/* Estrutura unificada de cards */
+.card-consultor {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 12px 14px;
+    will-change: transform;
 }
 
-.consultor-item:last-child {
-    border-bottom: none;
+.card-consultor:hover {
+    border-color: #475569;
 }
 
-/* Estilização Individual dos Elementos */
-.posicao {
-    font-size: 1.1rem;
-    color: #cbd5e1;
-    text-align: center;
+/* Efeito de destaque quando uma venda é registrada */
+@keyframes pulsoVenda {
+    0% {
+        border-color: #22c55e;
+        box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+        transform: scale(1.02);
+    }
+    100% {
+        border-color: #334155;
+        box-shadow: none;
+        transform: scale(1);
+    }
 }
 
-.perfil {
+.card-animar-venda {
+    animation: pulsoVenda 1s ease-out;
+}
+
+.consultor-info {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-/* Círculo provisório para a foto */
-.foto-placeholder {
-    width: 32px;
-    height: 32px;
-    background-color: #3b82f6; 
-    border-radius: 50%;
+.posicao-box {
+    width: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #94a3b8;
 }
 
-.nome {
-    font-size: 1rem;
+.foto-placeholder {
+    width: 36px;
+    height: 36px;
+    background-color: #3b82f6; 
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.foto-consultor {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.consultor-detalhes {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.consultor-detalhes .nome {
+    font-size: 0.95rem;
     font-weight: bold;
     color: #f8fafc;
 }
 
-.vendas-numero {
+.hora-ultima-venda {
+    font-size: 0.72rem;
+    color: #94a3b8;
+}
+
+/* Número de Vendas no Ranking */
+.vendas-destaque {
     font-size: 1.2rem;
+    font-weight: 700;
+    color: #f8fafc;
+    min-width: 40px;
+    text-align: right;
+    padding-right: 6px;
+}
+
+/* Ações e Controles no Painel Admin */
+.consultor-acoes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-menos, .btn-mais {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border: none;
+    border-radius: 6px;
+    color: #ffffff;
     font-weight: bold;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.btn-menos {
+    background-color: #ef4444;
+}
+
+.btn-mais {
+    background-color: #22c55e;
+}
+
+.btn-menos:disabled {
+    background-color: #475569;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.btn-menos:hover:not(:disabled), .btn-mais:hover {
+    opacity: 0.9;
+}
+
+.contador-vendas {
+    min-width: 38px;
     text-align: center;
+    font-size: 1.1rem;
+    font-weight: 700;
     color: #f8fafc;
 }

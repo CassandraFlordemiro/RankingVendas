@@ -7,28 +7,28 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="ranking-container">
+    <div class="ranking-container admin-container">
         <div class="header">
             <h2>Painel de Controle</h2>
         </div>
         
         <!-- Formulário para Novo Consultor -->
         <div style="margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 20px;">
-            <h3 style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">ADICIONAR CONSULTOR</h3>
+            <h3 style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; letter-spacing: 0.05em;">ADICIONAR CONSULTOR</h3>
             
-            <input type="text" id="novo-nome" placeholder="Nome do consultor..." style="padding: 10px; width: 100%; border-radius: 6px; border: none; margin-bottom: 10px; outline: none;">
+            <input type="text" id="novo-nome" placeholder="Nome do consultor..." style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid #334155; margin-bottom: 10px; outline: none; background: #0f172a; color: #f8fafc;">
             
-            <label for="nova-foto" style="font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 5px;">Adicionar foto do consultor (Opcional):</label>
-            <input type="file" id="nova-foto" accept="image/*" style="padding: 10px; width: 100%; border-radius: 6px; border: none; margin-bottom: 15px; outline: none; background: #334155; color: #f8fafc; cursor: pointer;">
+            <label for="nova-foto" style="font-size: 0.78rem; color: #94a3b8; display: block; margin-bottom: 6px;">Adicionar foto do consultor (Opcional):</label>
+            <input type="file" id="nova-foto" accept="image/*" style="padding: 8px; width: 100%; border-radius: 6px; border: 1px solid #334155; margin-bottom: 15px; outline: none; background: #0f172a; color: #94a3b8; cursor: pointer;">
             
             <button id="btn-adicionar" style="padding: 10px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Cadastrar na Equipe</button>
         </div>
         
         <!-- Área para Registrar Vendas -->
         <div>
-            <h3 style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">REGISTRAR VENDAS (+1)</h3>
-            <ul id="lista-admin" style="list-style: none;">
-                <!-- Os consultores e os botões de adicionar venda vão aparecer aqui magicamente -->
+            <h3 style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; letter-spacing: 0.05em;">REGISTRAR VENDAS</h3>
+            <ul id="lista-admin">
+                <!-- Cards renderizados dinamicamente pelo admin.js -->
             </ul>
         </div>
 
