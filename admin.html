@@ -19,17 +19,17 @@
 
         <!-- Box de Cadastro de Consultor -->
         <div class="box-cadastro-sidebar">
-            <h4 style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 12px; letter-spacing: 0.05em; font-weight: 700;">NOVO CONSULTOR</h4>
+            <h4 style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.05em; font-weight: 700;">NOVO CONSULTOR</h4>
             
-            <input type="text" id="novo-nome" placeholder="Nome do consultor..." style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid #334155; margin-bottom: 10px; outline: none; background: #0f172a; color: #f8fafc; font-size: 0.9rem;">
+            <input type="text" id="novo-nome" placeholder="Nome do consultor..." style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); margin-bottom: 10px; outline: none; background: var(--input-bg); color: var(--text-main); font-size: 0.9rem;">
             
-            <label for="nova-foto" style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 6px;">Foto do consultor (Opcional):</label>
-            <input type="file" id="nova-foto" accept="image/*" style="padding: 6px; width: 100%; border-radius: 6px; border: 1px solid #334155; margin-bottom: 14px; outline: none; background: #0f172a; color: #94a3b8; cursor: pointer; font-size: 0.75rem;">
+            <label for="nova-foto" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Foto do consultor (Opcional):</label>
+            <input type="file" id="nova-foto" accept="image/*" style="padding: 6px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); margin-bottom: 14px; outline: none; background: var(--input-bg); color: var(--text-muted); cursor: pointer; font-size: 0.75rem;">
             
-            <button id="btn-adicionar" style="padding: 10px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: background 0.2s ease;">Cadastrar na Equipe</button>
+            <button id="btn-adicionar" style="padding: 10px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">Cadastrar na Equipe</button>
         </div>
 
-        <!-- Boxes Individuais dos Botões da Sidebar -->
+        <!-- Links e Ações do Sistema -->
         <nav class="sidebar-nav-links">
             <button class="nav-box-btn" id="btn-menu-historico">
                 <span style="font-size: 1.1rem;">📊</span>
@@ -39,6 +39,24 @@
                 <span style="font-size: 1.1rem;">⚙️</span>
                 <span>Gerenciar Usuários</span>
             </button>
+
+            <!-- Seletor de Temas de Cores com Submenu Hover -->
+            <div class="theme-menu-container">
+                <button class="nav-box-btn" id="btn-menu-temas">
+                    <span style="font-size: 1.1rem;">🎨</span>
+                    <span>Temas de Cores</span>
+                </button>
+                <div class="theme-dropdown" id="theme-dropdown">
+                    <button class="theme-option-btn" data-theme="default">🔵 Deep Blue (Padrão)</button>
+                    <button class="theme-option-btn" data-theme="dracula">🟣 Dracula Soft</button>
+                    <button class="theme-option-btn" data-theme="light">⚪ Claro (Light)</button>
+                </div>
+            </div>
+
+            <button class="nav-box-btn btn-sair" id="btn-zerar">
+                <span style="font-size: 1.1rem;">🔄</span>
+                <span>Encerrar Ciclo (Zerar)</span>
+            </button>
             <button class="nav-box-btn btn-sair" id="btn-menu-logout">
                 <span style="font-size: 1.1rem;">🚪</span>
                 <span>Sair da Conta</span>
@@ -46,25 +64,45 @@
         </nav>
     </aside>
 
-    <!-- Conteúdo Principal do Painel -->
-    <div class="ranking-container admin-container">
-        <div class="header">
-            <h2>Painel de Controle</h2>
-            <button id="btn-abrir-menu" class="btn-menu-lateral" title="Abrir Menu">☰</button>
-        </div>
+    <!-- Grid do Dashboard Integrado -->
+    <div class="dashboard-grid">
         
-        <!-- Área para Registrar Vendas -->
-        <div>
-            <h3 style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; letter-spacing: 0.05em;">REGISTRAR VENDAS</h3>
+        <!-- Coluna 1: Painel Administrativo -->
+        <div class="ranking-container admin-container">
+            <div class="header-wrapper">
+                <div class="header-top">
+                    <h2>Painel de Controle</h2>
+                    <button id="btn-abrir-menu" class="btn-menu-lateral" title="Abrir Menu">☰</button>
+                </div>
+                <div class="header-bottom-labels">
+                    <span>REGISTRAR VENDAS</span>
+                    <span>AÇÕES</span>
+                </div>
+            </div>
+            
             <ul id="lista-admin">
-                <!-- Cards renderizados dinamicamente pelo admin.js -->
+                <!-- Preenchido dinamicamente -->
             </ul>
         </div>
 
-        <!-- Botão para Zerar Ranking -->
-        <div style="margin-top: 25px; border-top: 1px solid #334155; padding-top: 20px;">
-            <button id="btn-zerar" style="padding: 10px; width: 100%; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">Encerrar Ciclo (Zerar Vendas)</button>
+        <!-- Coluna 2: Ranking em Tempo Real -->
+        <div class="ranking-container ranking-display-container">
+            <div class="header-wrapper">
+                <div class="header-top">
+                    <h2>Ranking Geral</h2>
+                    <span class="live-badge"><span class="live-dot"></span> Tempo Real</span>
+                </div>
+                <div class="header-bottom-labels">
+                    <span>CONSULTOR</span>
+                    <span>TOTAL DE VENDAS</span>
+                </div>
+            </div>
+            
+            <ul id="lista-ranking">
+                <!-- Preenchido dinamicamente com gradiente adaptativo -->
+            </ul>
         </div>
+
     </div>
     
     <script type="module" src="admin.js"></script>
