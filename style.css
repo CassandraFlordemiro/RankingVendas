@@ -27,7 +27,7 @@ body {
     border: 1px solid #334155;
 }
 
-/* Painel de Controle com mais respiro horizontal */
+/* Painel de Controle */
 .admin-container {
     max-width: 500px;
 }
@@ -50,7 +50,7 @@ body {
     padding: 0 10px;
 }
 
-/* Listas base para ambos os painéis */
+/* Listas base */
 #lista-ranking, #lista-admin {
     list-style: none;
     display: flex;
@@ -75,11 +75,11 @@ body {
     border-color: #475569;
 }
 
-/* Efeito de destaque quando uma venda é registrada */
+/* Efeito de destaque para quem pontua (Verde) */
 @keyframes pulsoVenda {
     0% {
         border-color: #22c55e;
-        box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+        box-shadow: 0 0 18px rgba(34, 197, 94, 0.5);
         transform: scale(1.02);
     }
     100% {
@@ -89,8 +89,24 @@ body {
     }
 }
 
+/* Efeito de destaque para quem é ultrapassado (Vermelho) */
+@keyframes pulsoQueda {
+    0% {
+        border-color: #ef4444;
+        box-shadow: 0 0 18px rgba(239, 68, 68, 0.4);
+    }
+    100% {
+        border-color: #334155;
+        box-shadow: none;
+    }
+}
+
 .card-animar-venda {
-    animation: pulsoVenda 1s ease-out;
+    animation: pulsoVenda 1.2s ease-out;
+}
+
+.card-animar-queda {
+    animation: pulsoQueda 1.2s ease-out;
 }
 
 .consultor-info {
@@ -142,7 +158,7 @@ body {
     color: #94a3b8;
 }
 
-/* Número de Vendas no Ranking */
+/* Número de Vendas */
 .vendas-destaque {
     font-size: 1.2rem;
     font-weight: 700;
@@ -152,7 +168,7 @@ body {
     padding-right: 6px;
 }
 
-/* Ações e Controles no Painel Admin */
+/* Ações no Painel Admin */
 .consultor-acoes {
     display: flex;
     align-items: center;

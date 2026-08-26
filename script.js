@@ -16,12 +16,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const listaRanking = document.getElementById('lista-ranking');
 
-// Armazena posições e vendas anteriores para orquestrar as transições
 let posicoesAnteriores = new Map();
+let indicesAnteriores = new Map();
 let vendasAnteriores = new Map();
 let primeiraRenderizacao = true;
 
-// Define a medalha do Top 3 ou a numeração ordinal (ex: 4º)
+// Define a medalha do Top 3 ou a numeração ordinal
 function obterMedalhaOuPosicao(posicao) {
     if (posicao === 1) return `<img src="icones/Ouro.svg" alt="1º Lugar" style="width: 28px; height: 28px;">`;
     if (posicao === 2) return `<img src="icones/Prata.svg" alt="2º Lugar" style="width: 28px; height: 28px;">`;
@@ -36,12 +36,31 @@ function formatarHora(timestamp) {
     return `Última: ${data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 }
 
-// Função principal de escuta e montagem animada do ranking
+// Calcula cor suave translúcida (Verde no topo -> Vermelho na base)
+function calcularEstiloGradiente(index, total) {
+    if (total <= 1) {
+        return {
+            background: 'rgba(34, 197, 94, 0.12)',
+            border: '1px solid rgba(34, 197, 94, 0.35)'
+        };
+    }
+
+    // Interpola a matiz: 140° (Verde esmeralda) até 0° (Vermelho)
+    const progresso = index / (total - 1);
+    const hue = 140 - (progresso * 140); 
+
+    return {
+        background: `linear-gradient(90deg, hsla(${hue}, 65%, 45%, 0.15) 0%, rgba(30, 41, 59, 0.75) 100%)`,
+        border: `1px solid hsla(${hue}, 60%, 50%, 0.28)`
+    };
+}
+
+// Função principal de montagem do ranking
 function carregarRanking() {
     const consultoresRef = collection(db, "consultores");
 
     onSnapshot(consultoresRef, (snapshot) => {
-        // Passo 1: Captura a posição geográfica de cada card antes da reordenação (First)
+        // 1. Captura posição vertical dos cards antes do reordenamento
         const elementosExistentes = listaRanking.querySelectorAll('.card-consultor');
         elementosExistentes.forEach(el => {
             const id = el.getAttribute('data-id');
@@ -55,7 +74,7 @@ function carregarRanking() {
             consultores.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        // Ordenação com regras de desempate
+        // 2. Ordenação com desempate
         consultores.sort((a, b) => {
             const vendasA = a.vendas || 0;
             const vendasB = b.vendas || 0;
@@ -71,8 +90,9 @@ function carregarRanking() {
             return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
         });
 
-        // Passo 2: Renderiza os novos elementos no DOM
+        // 3. Renderização com o gradiente adaptativo
         listaRanking.innerHTML = '';
+        const totalConsultores = consultores.length;
 
         consultores.forEach((consultor, index) => {
             const posicao = index + 1;
@@ -80,6 +100,11 @@ function carregarRanking() {
             li.className = 'card-consultor';
             li.setAttribute('data-id', consultor.id);
             
+            // Aplica o gradiente translúcido
+            const estiloCor = calcularEstiloGradiente(index, totalConsultores);
+            li.style.background = estiloCor.background;
+            li.style.border = estiloCor.border;
+
             const visualFoto = consultor.foto && consultor.foto !== "default" 
                 ? `<img src="${consultor.foto}" alt="${consultor.nome}" class="foto-consultor">` 
                 : `<div class="foto-placeholder"></div>`;
@@ -104,34 +129,35 @@ function carregarRanking() {
             
             listaRanking.appendChild(li);
 
-            // Passo 3: Executa a animação FLIP (Invert & Play)
+            // 4. Animação suave e pulsos
             if (!primeiraRenderizacao) {
                 const topoAnterior = posicoesAnteriores.get(consultor.id);
                 const topoAtual = li.getBoundingClientRect().top;
+                const indexPassado = indicesAnteriores.get(consultor.id);
+                const vendasPassadas = vendasAnteriores.get(consultor.id) || 0;
 
                 if (topoAnterior !== undefined) {
                     const deltaY = topoAnterior - topoAtual;
                     
-                    // Se mudou de posição, desliza da posição antiga para a nova
                     if (deltaY !== 0) {
                         li.style.transform = `translateY(${deltaY}px)`;
                         li.style.transition = 'none';
 
                         requestAnimationFrame(() => {
-                            li.style.transition = 'transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                            li.style.transition = 'transform 1s cubic-bezier(0.16, 1, 0.3, 1)';
                             li.style.transform = 'translateY(0)';
                         });
                     }
                 }
 
-                // Se recebeu uma nova venda, ativa o brilho verde de pulso
-                const vendasPassadas = vendasAnteriores.get(consultor.id) || 0;
                 if ((consultor.vendas || 0) > vendasPassadas) {
                     li.classList.add('card-animar-venda');
+                } else if (indexPassado !== undefined && index > indexPassado) {
+                    li.classList.add('card-animar-queda');
                 }
             }
 
-            // Atualiza histórico local
+            indicesAnteriores.set(consultor.id, index);
             vendasAnteriores.set(consultor.id, consultor.vendas || 0);
         });
 
