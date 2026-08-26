@@ -77,9 +77,16 @@ function carregarPainelAdmin() {
 // 2. Função unificada para registrar ou remover vendas
 async function registrarVenda(id, quantidade) {
     const consultorRef = doc(db, "consultores", id);
-    await updateDoc(consultorRef, {
+    const atualizacao = {
         vendas: increment(quantidade)
-    });
+    };
+    
+    // Se for acréscimo (+1), atualiza a data/hora da última venda
+    if (quantidade > 0) {
+        atualizacao.ultimaVenda = Date.now();
+    }
+
+    await updateDoc(consultorRef, atualizacao);
 }
 
 // Motor para encolher a foto e transformá-la em texto Base64
@@ -124,7 +131,8 @@ btnAdicionar.addEventListener('click', async () => {
     await addDoc(collection(db, "consultores"), {
         nome: nome,
         vendas: 0,
-        foto: fotoFinal
+        foto: fotoFinal,
+        ultimaVenda: 0
     });
 
     // Limpa os campos após o cadastro
@@ -144,7 +152,8 @@ document.getElementById('btn-zerar').addEventListener('click', async () => {
         // Atualiza a venda de cada um para zero
         snapshot.forEach(async (documento) => {
             await updateDoc(doc(db, "consultores", documento.id), {
-                vendas: 0
+                vendas: 0,
+                ultimaVenda: 0
             });
         });
     }
