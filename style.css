@@ -58,6 +58,22 @@ body.theme-light {
     --input-bg: #f8fafc;
 }
 
+/* Tema 4: Refuturiza (Orange & White Corporate) */
+body.theme-refuturiza {
+    --bg-body: #f4f6f8;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --admin-card-bg: linear-gradient(180deg, #ffffff 0%, #fffbf8 100%);
+    --admin-border: #fed7aa;
+    --ranking-card-bg: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+    --ranking-border: #ffedd5;
+    --box-bg: #ffffff;
+    --box-border: #e2e8f0;
+    --box-border-hover: #ff4d00;
+    --sidebar-bg: #ffffff;
+    --input-bg: #f8fafc;
+}
+
 body {
     background-color: var(--bg-body);
     display: flex;
@@ -93,7 +109,7 @@ body {
     max-width: 470px;
     border-radius: 16px;
     padding: 20px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
     position: relative;
     display: flex;
     flex-direction: column;
@@ -121,7 +137,8 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-body.theme-light .header-wrapper {
+body.theme-light .header-wrapper,
+body.theme-refuturiza .header-wrapper {
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
@@ -163,11 +180,21 @@ body.theme-light .header-wrapper {
     text-transform: uppercase;
 }
 
+body.theme-refuturiza .live-badge {
+    background: rgba(255, 77, 0, 0.1);
+    border-color: rgba(255, 77, 0, 0.25);
+    color: #ff4d00;
+}
+
 .live-dot {
     width: 6px;
     height: 6px;
     background-color: #22c55e;
     border-radius: 50%;
+}
+
+body.theme-refuturiza .live-dot {
+    background-color: #ff4d00;
 }
 
 /* Botão Menu Hambúrguer */
@@ -271,7 +298,7 @@ body.theme-light .header-wrapper {
 .foto-placeholder {
     width: 36px;
     height: 36px;
-    background-color: #3b82f6; 
+    background-color: #ff4d00; 
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -340,6 +367,10 @@ body.theme-light .header-wrapper {
     background-color: #22c55e;
 }
 
+body.theme-refuturiza .btn-mais {
+    background-color: #ff4d00;
+}
+
 .btn-menos:disabled {
     background-color: var(--box-border);
     cursor: not-allowed;
@@ -388,12 +419,12 @@ body.theme-light .header-wrapper {
     background: var(--sidebar-bg);
     border-right: 1px solid var(--box-border);
     z-index: 999;
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
     display: flex;
     flex-direction: column;
     padding: 24px 20px;
     transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
-    overflow-y: auto;
+    overflow: visible;
 }
 
 .sidebar-drawer.active {
@@ -456,7 +487,7 @@ body.theme-light .header-wrapper {
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -477,54 +508,251 @@ body.theme-light .header-wrapper {
 }
 
 /* ==========================================================================
-   SUBMENU INTERATIVO DE TEMAS DE CORES
+   SUBMENU LATERAL FLUTUANTE (FLYOUT)
    ========================================================================== */
 .theme-menu-container {
     position: relative;
     width: 100%;
 }
 
+.theme-menu-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -15px;
+    width: 15px;
+    height: 100%;
+}
+
 .theme-dropdown {
     display: none;
+    position: absolute;
+    top: 0;
+    left: calc(100% + 12px);
+    width: 220px;
     flex-direction: column;
     gap: 6px;
-    background: var(--box-bg);
+    background: var(--sidebar-bg);
     border: 1px solid var(--box-border);
     border-radius: 10px;
     padding: 10px;
-    margin-top: 6px;
+    box-shadow: 10px 10px 30px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
 }
 
-/* Abre o submenu ao passar o mouse ou quando tiver a classe ativo */
-.theme-menu-container:hover .theme-dropdown,
-.theme-dropdown.show {
+body.theme-light .theme-dropdown,
+body.theme-refuturiza .theme-dropdown {
+    box-shadow: 5px 5px 25px rgba(0, 0, 0, 0.12);
+}
+
+.theme-menu-container:hover .theme-dropdown {
     display: flex;
-    animation: fadeIn 0.2s ease;
+    animation: flyoutSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes flyoutSlide {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.theme-arrow {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.theme-menu-container:hover .theme-arrow {
+    transform: translateX(3px);
+    color: var(--text-main);
 }
 
 .theme-option-btn {
     width: 100%;
-    padding: 9px 12px;
+    padding: 10px 12px;
     border-radius: 6px;
     border: 1px solid transparent;
     background: transparent;
     color: var(--text-main);
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     font-weight: 600;
     text-align: left;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .theme-option-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: var(--box-border-hover);
+}
+
+body.theme-light .theme-option-btn:hover,
+body.theme-refuturiza .theme-option-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   MODAIS CUSTOMIZADOS
+   ========================================================================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 1001;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.modal-overlay.active {
+    display: flex;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+    background: var(--sidebar-bg);
+    border: 1px solid var(--box-border);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--box-border);
+    margin-bottom: 16px;
+}
+
+.modal-header h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.lista-gerenciamento {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.item-gerenciamento {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--box-bg);
+    border: 1px solid var(--box-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.item-gerenciamento-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.item-gerenciamento-acoes {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-acao-modal {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.btn-acao-editar {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+body.theme-refuturiza .btn-acao-editar {
+    background: #ff4d00;
+}
+
+.btn-acao-excluir {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.btn-acao-modal:hover {
+    opacity: 0.85;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ==========================================================================
+   ESTILOS DE DESTAQUE DO HISTÓRICO (DIVISORES E LINHAS DE CORTE)
+   ========================================================================== */
+
+/* Linha divisória após o Top 3 */
+.divisor-historico-top3 {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+    margin: 8px 0;
+}
+
+body.theme-light .divisor-historico-top3,
+body.theme-refuturiza .divisor-historico-top3 {
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.15), transparent);
+}
+
+/* Divisor para consultores sem vendas */
+.divisor-historico-zerados {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0 6px 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ef4444;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.divisor-historico-zerados::before,
+.divisor-historico-zerados::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(239, 68, 68, 0.3);
+}
+
+/* Card atenuado para quem zerou */
+.item-historico-zerado {
+    opacity: 0.55;
+    border-style: dashed;
 }
