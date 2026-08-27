@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, getDoc, updateDoc, deleteDoc, increment, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, getDoc, updateDoc, increment, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgtHlqlv4meTjW4VyJ8HrVCfUqMHaoUp0",
@@ -80,6 +80,12 @@ const modalConfIcone = document.getElementById('modal-conf-icone');
 const btnConfCancelar = document.getElementById('btn-conf-cancelar');
 const btnConfConfirmar = document.getElementById('btn-conf-confirmar');
 let callbackConfirmacao = null;
+
+// Checagem de redirecionamento para abrir o modal de gerenciar consultores automaticamente
+const paramsUrl = new URLSearchParams(window.location.search);
+if (paramsUrl.get('abrir') === 'usuarios') {
+    modalGerenciar.classList.add('active');
+}
 
 function exibirConfirmacao({ titulo, mensagem, icone = "⚠️", textoBotao = "Confirmar", corBotao = "#ef4444", onConfirmar }) {
     modalConfTitulo.textContent = titulo;
@@ -231,7 +237,7 @@ async function verificarViradaDeDia(consultores) {
 }
 
 // ==========================================================================
-// DASHBOARD PRINCIPAL
+// DASHBOARD PRINCIPAL (FILTRO: ATIVOS APENAS NA OPERAÇÃO)
 // ==========================================================================
 function carregarDashboard() {
     const consultoresRef = collection(db, "consultores");
@@ -243,20 +249,21 @@ function carregarDashboard() {
             if (id) posicoesAnteriores.set(id, el.getBoundingClientRect().top);
         });
 
-        const consultores = [];
+        const todosConsultores = [];
         snapshot.forEach((docSnap) => {
-            consultores.push({ id: docSnap.id, ...docSnap.data() });
+            todosConsultores.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        dadosCicloAtual = consultores;
+        const consultoresAtivos = todosConsultores.filter(c => c.ativo !== false);
+        dadosCicloAtual = consultoresAtivos;
 
-        await verificarViradaDeDia(consultores);
+        await verificarViradaDeDia(consultoresAtivos);
 
-        const consultoresAlfabetico = [...consultores].sort((a, b) => 
+        const consultoresAlfabetico = [...consultoresAtivos].sort((a, b) => 
             a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
         );
 
-        // 1. Painel Administrativo
+        // 1. Painel Administrativo (Apenas Ativos)
         listaAdmin.innerHTML = '';
         consultoresAlfabetico.forEach((consultor) => {
             const id = consultor.id;
@@ -301,30 +308,47 @@ function carregarDashboard() {
             });
         });
 
-        // 2. Modal Gerenciar Usuários
+        // 2. Modal Gerenciar Usuários (Lista Ativos e Inativos com Confirmação na Reativação)
         listaGerenciar.innerHTML = '';
-        consultoresAlfabetico.forEach((consultor) => {
+        const todosOrdenados = [...todosConsultores].sort((a, b) => {
+            if ((a.ativo !== false) === (b.ativo !== false)) {
+                return a.nome.localeCompare(b.nome, 'pt-BR');
+            }
+            return a.ativo === false ? 1 : -1;
+        });
+
+        todosOrdenados.forEach((consultor) => {
             const id = consultor.id;
+            const estaAtivo = consultor.ativo !== false;
             const visualFoto = consultor.foto && consultor.foto !== "default"
-                ? `<img src="${consultor.foto}" alt="${consultor.nome}" class="foto-consultor">`
-                : `<div class="foto-placeholder"></div>`;
+                ? `<img src="${consultor.foto}" alt="${consultor.nome}" class="foto-consultor" style="${!estaAtivo ? 'filter: grayscale(100%); opacity: 0.6;' : ''}">`
+                : `<div class="foto-placeholder" style="${!estaAtivo ? 'background: #64748b;' : ''}"></div>`;
 
             const li = document.createElement('li');
             li.className = 'item-gerenciamento';
+            if (!estaAtivo) li.style.opacity = '0.7';
+
             li.innerHTML = `
                 <div class="item-gerenciamento-info">
                     ${visualFoto}
-                    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${consultor.nome}</span>
+                    <div>
+                        <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${consultor.nome}</span>
+                        ${!estaAtivo ? '<span style="font-size: 0.72rem; color: #ef4444; font-weight: bold; margin-left: 6px;">(Inativo)</span>' : ''}
+                    </div>
                 </div>
                 <div class="item-gerenciamento-acoes">
-                    <button class="btn-acao-modal btn-acao-editar" data-id="${id}" data-nome="${consultor.nome}" data-foto="${consultor.foto || 'default'}">Editar</button>
-                    <button class="btn-acao-modal btn-acao-excluir" data-id="${id}" data-nome="${consultor.nome}">Excluir</button>
+                    <a href="desempenho.html?id=${id}" class="btn-acao-modal btn-acao-editar" style="text-decoration: none; display: inline-flex; align-items: center;" title="Ver Métricas">📈 Gráficos</a>
+                    <button class="btn-acao-modal btn-acao-editar btn-editar-usr" data-id="${id}" data-nome="${consultor.nome}" data-foto="${consultor.foto || 'default'}">Editar</button>
+                    ${estaAtivo 
+                        ? `<button class="btn-acao-modal btn-acao-excluir btn-desativar-usr" data-id="${id}" data-nome="${consultor.nome}">Desativar</button>`
+                        : `<button class="btn-acao-modal btn-reativar-usr" data-id="${id}" data-nome="${consultor.nome}" style="background: #22c55e; color: white;">Reativar</button>`
+                    }
                 </div>
             `;
             listaGerenciar.appendChild(li);
         });
 
-        document.querySelectorAll('.btn-acao-editar').forEach(botao => {
+        document.querySelectorAll('.btn-editar-usr').forEach(botao => {
             botao.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
                 const nome = this.getAttribute('data-nome');
@@ -338,26 +362,52 @@ function carregarDashboard() {
             });
         });
 
-        document.querySelectorAll('.btn-acao-excluir').forEach(botao => {
+        // Desativação (Soft Delete)
+        document.querySelectorAll('.btn-desativar-usr').forEach(botao => {
             botao.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
                 const nome = this.getAttribute('data-nome');
 
                 exibirConfirmacao({
-                    titulo: "Excluir Consultor",
-                    mensagem: `Tem certeza que deseja remover ${nome} da equipe?`,
-                    icone: "🗑️",
-                    textoBotao: "Excluir",
+                    titulo: "Desativar Consultor",
+                    mensagem: `Deseja desativar ${nome}? Os dados e gráficos históricos continuarão preservados para consultas e relatórios.`,
+                    icone: "⚠️",
+                    textoBotao: "Desativar",
                     corBotao: "#ef4444",
                     onConfirmar: async () => {
-                        await deleteDoc(doc(db, "consultores", id));
+                        await updateDoc(doc(db, "consultores", id), {
+                            ativo: false,
+                            vendas: 0,
+                            dataDesativacao: Date.now()
+                        });
                     }
                 });
             });
         });
 
-        // 3. Ranking em Tempo Real
-        const consultoresRanking = [...consultores].sort((a, b) => {
+        // Reativação com Confirmação
+        document.querySelectorAll('.btn-reativar-usr').forEach(botao => {
+            botao.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const nome = this.getAttribute('data-nome');
+
+                exibirConfirmacao({
+                    titulo: "Reativar Consultor",
+                    mensagem: `Deseja reintegrar ${nome} à equipe ativa? Ele voltará a aparecer no painel e no ranking em tempo real.`,
+                    icone: "🔄",
+                    textoBotao: "Reativar",
+                    corBotao: "#22c55e",
+                    onConfirmar: async () => {
+                        await updateDoc(doc(db, "consultores", id), {
+                            ativo: true
+                        });
+                    }
+                });
+            });
+        });
+
+        // 3. Ranking em Tempo Real (Apenas Ativos)
+        const consultoresRanking = [...consultoresAtivos].sort((a, b) => {
             const vendasA = a.vendas || 0;
             const vendasB = b.vendas || 0;
             if (vendasB !== vendasA) return vendasB - vendasA;
@@ -438,18 +488,16 @@ function carregarDashboard() {
 }
 
 // ==========================================================================
-// REGISTRO DE VENDAS (SINCRONIZAÇÃO COMPLETA DA EQUIPE)
+// REGISTRO DE VENDAS
 // ==========================================================================
 async function registrarVenda(id, nome, quantidade) {
     const dataHoje = obterDataHojeString();
 
-    // 1. Atualiza placar do ciclo ativo
     const consultorRef = doc(db, "consultores", id);
     const atualizacao = { vendas: increment(quantidade) };
     if (quantidade > 0) atualizacao.ultimaVenda = Date.now();
     await updateDoc(consultorRef, atualizacao);
 
-    // 2. Busca histórico existente
     const histRef = doc(db, "historicos", dataHoje);
     const histSnap = await getDoc(histRef);
 
@@ -468,7 +516,6 @@ async function registrarVenda(id, nome, quantidade) {
         }
     }
 
-    // 3. Garante que todos os consultores da equipe estejam presentes
     dadosCicloAtual.forEach(consultor => {
         const existe = ranking.find(r => r.id === consultor.id || r.nome === consultor.nome);
         if (!existe) {
@@ -481,7 +528,6 @@ async function registrarVenda(id, nome, quantidade) {
         }
     });
 
-    // 4. Aplica o incremento no consultor que pontuou
     const indexConsultor = ranking.findIndex(c => c.id === id || c.nome === nome);
     const consultorAtivo = dadosCicloAtual.find(c => c.id === id);
     const fotoConsultor = consultorAtivo ? (consultorAtivo.foto || "default") : "default";
@@ -501,7 +547,7 @@ async function registrarVenda(id, nome, quantidade) {
 }
 
 // ==========================================================================
-// CONSULTA HISTÓRICO POR DATA (COM TOP 3 E LINHA DE CORTE)
+// CONSULTA HISTÓRICO POR DATA
 // ==========================================================================
 btnMenuHistorico.addEventListener('click', () => {
     fecharSidebar();
@@ -546,7 +592,6 @@ async function carregarHistoricoPorData(dataString) {
         dadosHistoricoCarregados = [];
     }
 
-    // Se for hoje, mescla consultores adicionados recentemente que estejam com 0
     if (dataString === obterDataHojeString() && dadosCicloAtual.length > 0) {
         dadosCicloAtual.forEach(c => {
             const existe = dadosHistoricoCarregados.find(r => r.id === c.id || r.nome === c.nome);
@@ -580,7 +625,6 @@ async function carregarHistoricoPorData(dataString) {
         const totalVendas = item.vendas || 0;
         const posicao = index + 1;
 
-        // Linha Divisória Top 3
         if (index === 3 && !divisorTop3Inserido && totalVendas > 0) {
             const linhaTop3 = document.createElement('div');
             linhaTop3.className = 'divisor-historico-top3';
@@ -588,7 +632,6 @@ async function carregarHistoricoPorData(dataString) {
             divisorTop3Inserido = true;
         }
 
-        // Linha de Corte para Zerados
         if (totalVendas === 0 && !divisorZeradosInserido) {
             const linhaZerados = document.createElement('div');
             linhaZerados.className = 'divisor-historico-zerados';
@@ -682,6 +725,7 @@ btnAdicionar.addEventListener('click', async () => {
         nome: nome,
         vendas: 0,
         foto: fotoFinal,
+        ativo: true,
         ultimaVenda: 0
     });
 
