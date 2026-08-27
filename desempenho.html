@@ -23,25 +23,34 @@
             border: 1px solid var(--admin-border);
             padding: 14px 20px;
             border-radius: 12px;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .btn-voltar {
-            display: inline-flex;
+        .nav-links-group {
+            display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn-nav-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
             background: var(--box-bg);
             border: 1px solid var(--box-border);
             border-radius: 8px;
             color: var(--text-main);
             text-decoration: none;
-            font-size: 0.88rem;
+            font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s ease, border-color 0.2s ease;
         }
 
-        .btn-voltar:hover {
+        .btn-nav-action:hover {
             transform: scale(1.03);
             border-color: var(--box-border-hover);
         }
@@ -59,7 +68,6 @@
             }
         }
 
-        /* Coluna Lateral Esquerda */
         .sidebar-column {
             display: flex;
             flex-direction: column;
@@ -183,7 +191,6 @@
             box-shadow: 0 4px 16px rgba(255, 77, 0, 0.32);
         }
 
-        /* Nova Box Lateral Inferior: Consistência & Frequência */
         .consistency-card {
             background: var(--admin-card-bg);
             border: 1px solid var(--admin-border);
@@ -232,7 +239,6 @@
             color: var(--text-main);
         }
 
-        /* Coluna Principal da Direita */
         .analytics-main {
             display: flex;
             flex-direction: column;
@@ -365,12 +371,21 @@
 <body>
     <div class="analytics-container">
         
+        <!-- Header com Navegação Cruzada -->
         <header class="analytics-header-bar">
-            <a href="admin.html?abrir=usuarios" class="btn-voltar">
-                <span>‹</span>
-                <span>Voltar ao Gerenciamento</span>
-            </a>
-            <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Dashboard de Desempenho</h2>
+            <div class="nav-links-group">
+                <a href="admin.html" class="btn-nav-action">
+                    <span>⚙️</span>
+                    <span>Painel Admin</span>
+                </a>
+                <a href="comparativo.html" class="btn-nav-action">
+                    <span>👥</span>
+                    <span>Comparativo da Equipe</span>
+                </a>
+            </div>
+
+            <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Dashboard Individual</h2>
+
             <button id="btn-exportar-consultor" class="btn-acao-modal btn-acao-editar" style="padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
                 📥 Exportar CSV
             </button>
@@ -378,10 +393,7 @@
 
         <main class="split-layout">
             
-            <!-- Coluna Lateral Dividida em 2 Boxes Perfeitamente Alinhadas -->
             <div class="sidebar-column">
-                
-                <!-- Box 1: Perfil & Filtros (Alinhada com o Bloco Superior) -->
                 <aside class="profile-card">
                     <div id="box-avatar">
                         <div class="profile-placeholder-lg" id="consultor-avatar-placeholder">?</div>
@@ -414,7 +426,6 @@
                     </div>
                 </aside>
 
-                <!-- Box 2: Frequência & Consistência (Alinhada com o Gráfico Inferior) -->
                 <aside class="consistency-card">
                     <span class="consistency-title">📊 Frequência no Ciclo</span>
                     
@@ -442,10 +453,8 @@
                         <span class="consistency-item-val" id="kpi-zerados-dias" style="color: #ef4444;">0 dias</span>
                     </div>
                 </aside>
-
             </div>
 
-            <!-- Coluna Analítica da Direita -->
             <section class="analytics-main">
                 <div class="kpi-row">
                     <div class="kpi-card">
