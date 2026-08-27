@@ -50,6 +50,7 @@
             display: grid;
             grid-template-columns: 310px 1fr;
             gap: 20px;
+            align-items: stretch;
         }
 
         @media (max-width: 950px) {
@@ -58,31 +59,36 @@
             }
         }
 
-        /* Coluna Lateral: Perfil e Filtros */
+        /* Coluna Lateral Esquerda */
+        .sidebar-column {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
         .profile-card {
             background: var(--admin-card-bg);
             border: 1px solid var(--admin-border);
             border-radius: 14px;
-            padding: 24px 18px;
+            padding: 20px 18px;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            gap: 14px;
-            height: fit-content;
+            gap: 12px;
         }
 
         .profile-avatar-lg {
-            width: 96px;
-            height: 96px;
+            width: 88px;
+            height: 88px;
             border-radius: 50%;
             object-fit: cover;
             border: 3px solid var(--box-border-hover);
         }
 
         .profile-placeholder-lg {
-            width: 96px;
-            height: 96px;
+            width: 88px;
+            height: 88px;
             border-radius: 50%;
             background: #ff4d00;
             display: flex;
@@ -93,13 +99,12 @@
             color: #fff;
         }
 
-        /* Badge da Posição Mensal Geral no Perfil */
         .badge-posicao-mensal {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            margin-top: 6px;
+            margin-top: 4px;
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.82rem;
@@ -113,15 +118,15 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             text-align: left;
-            margin-top: 6px;
-            padding-top: 14px;
+            margin-top: 4px;
+            padding-top: 10px;
             border-top: 1px solid var(--box-border);
         }
 
         .filter-label {
-            font-size: 0.74rem;
+            font-size: 0.72rem;
             color: var(--text-muted);
             font-weight: 700;
             letter-spacing: 0.05em;
@@ -129,19 +134,19 @@
 
         .select-custom {
             width: 100%;
-            padding: 11px 14px;
+            padding: 10px 12px;
             border-radius: 8px;
             border: 1px solid var(--box-border);
             background: var(--input-bg);
             color: var(--text-main);
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             outline: none;
             transition: all 0.2s ease;
         }
 
         .select-destaque-consultor {
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.92rem;
             cursor: pointer;
             border: none;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
@@ -178,14 +183,62 @@
             box-shadow: 0 4px 16px rgba(255, 77, 0, 0.32);
         }
 
-        /* Painel Analítico da Direita */
+        /* Nova Box Lateral Inferior: Consistência & Frequência */
+        .consistency-card {
+            background: var(--admin-card-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: 14px;
+            padding: 20px 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .consistency-title {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--box-border);
+            padding-bottom: 8px;
+        }
+
+        .consistency-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--box-bg);
+            border: 1px solid var(--box-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+
+        .consistency-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .consistency-item-label {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .consistency-item-val {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        /* Coluna Principal da Direita */
         .analytics-main {
             display: flex;
             flex-direction: column;
             gap: 18px;
         }
 
-        /* Grid de KPIs em 4 colunas */
         .kpi-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -213,32 +266,34 @@
             transform: translateY(-2px);
         }
 
-        /* Estilização Card: Melhor Fechamento */
         .kpi-card-melhor {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, var(--admin-card-bg) 100%);
-            border: 1px solid rgba(34, 197, 94, 0.45);
+            background: #16a34a !important;
+            border: 1px solid #22c55e !important;
+            box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
         }
 
         .kpi-card-melhor .kpi-title {
-            color: #4ade80;
+            color: rgba(255, 255, 255, 0.88) !important;
         }
 
         .kpi-card-melhor .kpi-value {
-            color: #22c55e;
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
-        /* Estilização Card: Pior Fechamento */
         .kpi-card-pior {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.14) 0%, var(--admin-card-bg) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.4);
+            background: #dc2626 !important;
+            border: 1px solid #ef4444 !important;
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);
         }
 
         .kpi-card-pior .kpi-title {
-            color: #f87171;
+            color: rgba(255, 255, 255, 0.88) !important;
         }
 
         .kpi-card-pior .kpi-value {
-            color: #ef4444;
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
         .kpi-title {
@@ -322,41 +377,76 @@
         </header>
 
         <main class="split-layout">
-            <aside class="profile-card">
-                <div id="box-avatar">
-                    <div class="profile-placeholder-lg" id="consultor-avatar-placeholder">?</div>
-                    <img id="consultor-avatar-img" src="" alt="Foto" class="profile-avatar-lg" style="display: none;">
-                </div>
+            
+            <!-- Coluna Lateral Dividida em 2 Boxes Perfeitamente Alinhadas -->
+            <div class="sidebar-column">
                 
-                <div>
-                    <h3 id="consultor-nome-display" style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">Carregando...</h3>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Consultor(a) de Vendas</p>
-                    
-                    <!-- Posição Mensal Geral -->
-                    <div id="badge-posicao-container" class="badge-posicao-mensal">
-                        <!-- Preenchido dinamicamente com medalha ou posição -->
+                <!-- Box 1: Perfil & Filtros (Alinhada com o Bloco Superior) -->
+                <aside class="profile-card">
+                    <div id="box-avatar">
+                        <div class="profile-placeholder-lg" id="consultor-avatar-placeholder">?</div>
+                        <img id="consultor-avatar-img" src="" alt="Foto" class="profile-avatar-lg" style="display: none;">
                     </div>
-                </div>
+                    
+                    <div>
+                        <h3 id="consultor-nome-display" style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">Carregando...</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">Consultor(a) de Vendas</p>
+                        
+                        <div id="badge-posicao-container" class="badge-posicao-mensal">
+                            <!-- Preenchido dinamicamente -->
+                        </div>
+                    </div>
 
-                <div class="filter-group">
-                    <label class="filter-label" for="select-consultor">SELECIONAR CONSULTOR</label>
-                    <select id="select-consultor" class="select-custom select-destaque-consultor">
-                        <!-- Preenchido dinamicamente -->
-                    </select>
-                </div>
+                    <div class="filter-group">
+                        <label class="filter-label" for="select-consultor">SELECIONAR CONSULTOR</label>
+                        <select id="select-consultor" class="select-custom select-destaque-consultor">
+                            <!-- Preenchido dinamicamente -->
+                        </select>
+                    </div>
 
-                <div class="filter-group">
-                    <label class="filter-label" for="select-mes">MÊS DE REFERÊNCIA</label>
-                    <select id="select-mes" class="select-custom">
-                        <option value="2026-08">Agosto / 2026</option>
-                        <option value="2026-07">Julho / 2026</option>
-                        <option value="2026-06">Junho / 2026</option>
-                    </select>
-                </div>
-            </aside>
+                    <div class="filter-group">
+                        <label class="filter-label" for="select-mes">MÊS DE REFERÊNCIA</label>
+                        <select id="select-mes" class="select-custom">
+                            <option value="2026-08">Agosto / 2026</option>
+                            <option value="2026-07">Julho / 2026</option>
+                            <option value="2026-06">Junho / 2026</option>
+                        </select>
+                    </div>
+                </aside>
 
+                <!-- Box 2: Frequência & Consistência (Alinhada com o Gráfico Inferior) -->
+                <aside class="consistency-card">
+                    <span class="consistency-title">📊 Frequência no Ciclo</span>
+                    
+                    <div class="consistency-item">
+                        <div class="consistency-item-info">
+                            <span class="consistency-item-label">🏆 Presença no Pódio (Top 3)</span>
+                            <span style="font-size: 0.7rem; color: var(--text-muted);" id="kpi-podio-porcentagem">0% dos ciclos</span>
+                        </div>
+                        <span class="consistency-item-val" id="kpi-podio-dias" style="color: #f59e0b;">0 dias</span>
+                    </div>
+
+                    <div class="consistency-item">
+                        <div class="consistency-item-info">
+                            <span class="consistency-item-label">🎯 Dias Ativos (Com Venda)</span>
+                            <span style="font-size: 0.7rem; color: var(--text-muted);" id="kpi-ativos-porcentagem">0% dos ciclos</span>
+                        </div>
+                        <span class="consistency-item-val" id="kpi-ativos-dias" style="color: #10b981;">0 dias</span>
+                    </div>
+
+                    <div class="consistency-item">
+                        <div class="consistency-item-info">
+                            <span class="consistency-item-label">⚠️ Ciclos Zerados</span>
+                            <span style="font-size: 0.7rem; color: var(--text-muted);">Sem conversão</span>
+                        </div>
+                        <span class="consistency-item-val" id="kpi-zerados-dias" style="color: #ef4444;">0 dias</span>
+                    </div>
+                </aside>
+
+            </div>
+
+            <!-- Coluna Analítica da Direita -->
             <section class="analytics-main">
-                <!-- Grid de 4 KPIs -->
                 <div class="kpi-row">
                     <div class="kpi-card">
                         <span class="kpi-title">Total no Período</span>
@@ -376,7 +466,6 @@
                     </div>
                 </div>
 
-                <!-- Gráfico 1: Volume de Vendas -->
                 <div class="chart-card">
                     <div class="chart-header">
                         <h3>Volume de Vendas Diárias</h3>
@@ -390,7 +479,6 @@
                     </div>
                 </div>
 
-                <!-- Gráfico 2: Posição no Ranking -->
                 <div class="chart-card">
                     <div class="chart-header">
                         <h3>Evolução de Posição no Ranking Diário</h3>

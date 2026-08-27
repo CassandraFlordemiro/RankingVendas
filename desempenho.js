@@ -39,6 +39,12 @@ const kpiMediaVendas = document.getElementById('kpi-media-vendas');
 const kpiMelhorDia = document.getElementById('kpi-melhor-dia');
 const kpiPiorDia = document.getElementById('kpi-pior-dia');
 
+const kpiPodioDias = document.getElementById('kpi-podio-dias');
+const kpiPodioPorcentagem = document.getElementById('kpi-podio-porcentagem');
+const kpiAtivosDias = document.getElementById('kpi-ativos-dias');
+const kpiAtivosPorcentagem = document.getElementById('kpi-ativos-porcentagem');
+const kpiZeradosDias = document.getElementById('kpi-zerados-dias');
+
 const btnChartBar = document.getElementById('btn-chart-bar');
 const btnChartLine = document.getElementById('btn-chart-line');
 const btnExportarConsultor = document.getElementById('btn-exportar-consultor');
@@ -102,7 +108,7 @@ async function carregarConsultores() {
     atualizarDashboard();
 }
 
-// 2. Coleta dados e calcula a classificação geral e KPIs
+// 2. Coleta dados e calcula a classificação geral, KPIs e Métricas de Consistência
 async function atualizarDashboard() {
     const consultorId = selectConsultor.value;
     const mesEscolhido = selectMes.value;
@@ -131,7 +137,6 @@ async function atualizarDashboard() {
             const docData = docSnap.data();
             docsDoMes.push({ dataId, docData });
 
-            // Contabiliza acumulado de toda a equipe para o Ranking Mensal
             let ranking = docData.ranking || [];
             if (!Array.isArray(ranking) && typeof ranking === 'object') {
                 ranking = Object.values(ranking);
@@ -145,7 +150,6 @@ async function atualizarDashboard() {
         }
     });
 
-    // Calcula posição geral no ranking mensal do mês selecionado
     const arrayAcumulado = Array.from(acumuladoMensalGeral.entries())
         .map(([id, vendas]) => ({ id, vendas }))
         .sort((a, b) => b.vendas - a.vendas);
@@ -155,7 +159,6 @@ async function atualizarDashboard() {
 
     badgePosicaoContainer.innerHTML = obterMedalhaOuPosicaoMensal(posicaoGeral);
 
-    // Ordenação cronológica para os gráficos
     docsDoMes.sort((a, b) => a.dataId.localeCompare(b.dataId));
 
     const labelsDias = [];
@@ -170,6 +173,11 @@ async function atualizarDashboard() {
     let piorDiaTexto = "-";
     let diasComRegistro = 0;
     let totalMaxConsultores = 10;
+
+    let totalDiasNoMes = docsDoMes.length;
+    let diasNoPodio = 0;
+    let diasAtivosComVenda = 0;
+    let diasZerados = 0;
 
     docsDoMes.forEach(({ dataId, docData }) => {
         let ranking = docData.ranking || [];
@@ -194,15 +202,22 @@ async function atualizarDashboard() {
         dadosHistoricoConsultor.push({ data: dataId, vendas: qtd, posicao: posicao || '-' });
 
         somaTotal += qtd;
-        if (qtd > 0) diasComRegistro++;
+        if (qtd > 0) {
+            diasComRegistro++;
+            diasAtivosComVenda++;
+        } else {
+            diasZerados++;
+        }
 
-        // Melhor Fechamento
+        if (posicao && posicao <= 3 && qtd > 0) {
+            diasNoPodio++;
+        }
+
         if (qtd > melhorVenda) {
             melhorVenda = qtd;
             melhorDiaTexto = `${diaFormatado} (${qtd})`;
         }
 
-        // Pior Fechamento (considera ciclos com registros)
         if (qtd < piorVenda) {
             piorVenda = qtd;
             piorDiaTexto = `${diaFormatado} (${qtd})`;
@@ -214,6 +229,17 @@ async function atualizarDashboard() {
     kpiMediaVendas.textContent = media;
     kpiMelhorDia.textContent = melhorVenda >= 0 ? melhorDiaTexto : "-";
     kpiPiorDia.textContent = piorVenda < 999999 ? piorDiaTexto : "-";
+
+    // Atualização da Box 2: Consistência
+    kpiPodioDias.textContent = `${diasNoPodio} ${diasNoPodio === 1 ? 'dia' : 'dias'}`;
+    const pctPodio = totalDiasNoMes > 0 ? Math.round((diasNoPodio / totalDiasNoMes) * 100) : 0;
+    kpiPodioPorcentagem.textContent = `${pctPodio}% dos ciclos`;
+
+    kpiAtivosDias.textContent = `${diasAtivosComVenda} ${diasAtivosComVenda === 1 ? 'dia' : 'dias'}`;
+    const pctAtivos = totalDiasNoMes > 0 ? Math.round((diasAtivosComVenda / totalDiasNoMes) * 100) : 0;
+    kpiAtivosPorcentagem.textContent = `${pctAtivos}% dos ciclos`;
+
+    kpiZeradosDias.textContent = `${diasZerados} ${diasZerados === 1 ? 'dia' : 'dias'}`;
 
     renderizarGraficoVendas(labelsDias, valoresVendas, consultor.nome);
     renderizarGraficoPosicoes(labelsDias, valoresPosicoes, consultor.nome, totalMaxConsultores);
