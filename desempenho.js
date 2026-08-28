@@ -1,6 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+    getFirestore, collection, getDocs, query, where 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDgtHlqlv4meTjW4VyJ8HrVCfUqMHaoUp0",
@@ -15,12 +17,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Trava de Autenticação
-onAuthStateChanged(auth, (user) => {
-    if (!user) window.location.href = "login.html";
-});
-
-// Sincroniza Tema Salvo
 const temaSalvo = localStorage.getItem('ranking_tema_preferido') || 'default';
 if (temaSalvo === 'dracula') document.body.classList.add('theme-dracula');
 else if (temaSalvo === 'light') document.body.classList.add('theme-light');
@@ -29,9 +25,9 @@ else if (temaSalvo === 'refuturiza') document.body.classList.add('theme-refuturi
 // Elementos DOM
 const selectConsultor = document.getElementById('select-consultor');
 const selectMes = document.getElementById('select-mes');
-const consultorNomeDisplay = document.getElementById('consultor-nome-display');
-const consultorAvatarImg = document.getElementById('consultor-avatar-img');
-const consultorAvatarPlaceholder = document.getElementById('consultor-avatar-placeholder');
+const nomeDisplay = document.getElementById('consultor-nome-display');
+const avatarPlaceholder = document.getElementById('consultor-avatar-placeholder');
+const avatarImg = document.getElementById('consultor-avatar-img');
 const badgePosicaoContainer = document.getElementById('badge-posicao-container');
 
 const kpiTotalVendas = document.getElementById('kpi-total-vendas');
@@ -45,253 +41,258 @@ const kpiAtivosDias = document.getElementById('kpi-ativos-dias');
 const kpiAtivosPorcentagem = document.getElementById('kpi-ativos-porcentagem');
 const kpiZeradosDias = document.getElementById('kpi-zerados-dias');
 
+const tbodyExtrato = document.getElementById('tbody-extrato');
+const extratoQtdTotal = document.getElementById('extrato-qtd-total');
+
 const btnChartBar = document.getElementById('btn-chart-bar');
 const btnChartLine = document.getElementById('btn-chart-line');
 const btnExportarConsultor = document.getElementById('btn-exportar-consultor');
 
-let listaConsultores = [];
 let chartVendasInstance = null;
 let chartPosicaoInstance = null;
-let tipoGrafico = 'bar';
-let dadosHistoricoConsultor = [];
+let tipoGraficoVendas = 'bar';
+let listaContratosConsultor = [];
+let listaConsultores = [];
 
-function obterCorDestaque() {
-    if (temaSalvo === 'refuturiza') return '#ff4d00';
-    if (temaSalvo === 'dracula') return '#bd93f9';
-    return '#3b82f6';
-}
+const agora = new Date();
+const mesPadrao = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+if (selectMes && !selectMes.value) selectMes.value = mesPadrao;
 
-function obterCorSecundaria() {
-    if (temaSalvo === 'refuturiza') return '#22c55e';
-    if (temaSalvo === 'dracula') return '#50fa7b';
-    return '#10b981';
-}
+const paramsUrl = new URLSearchParams(window.location.search);
+let consultorIdAtual = paramsUrl.get('id');
 
-function obterMedalhaOuPosicaoMensal(posicao) {
-    if (posicao === 1) return `<img src="icones/Ouro.svg" alt="1º Lugar" style="width: 22px; height: 22px;"> <span>1º Lugar Geral</span>`;
-    if (posicao === 2) return `<img src="icones/Prata.svg" alt="2º Lugar" style="width: 22px; height: 22px;"> <span>2º Lugar Geral</span>`;
-    if (posicao === 3) return `<img src="icones/Bronze.svg" alt="3º Lugar" style="width: 22px; height: 22px;"> <span>3º Lugar Geral</span>`;
-    return `<span>${posicao}º Lugar Geral</span>`;
-}
-
-// 1. Carrega todos os consultores (Ativos e Inativos)
-async function carregarConsultores() {
-    const snap = await getDocs(collection(db, "consultores"));
-    listaConsultores = [];
-    selectConsultor.innerHTML = '';
-
-    snap.forEach((d) => {
-        listaConsultores.push({ id: d.id, ...d.data() });
-    });
-
-    listaConsultores.sort((a, b) => {
-        if ((a.ativo !== false) === (b.ativo !== false)) {
-            return a.nome.localeCompare(b.nome, 'pt-BR');
-        }
-        return a.ativo === false ? 1 : -1;
-    });
-
-    listaConsultores.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.ativo === false ? `${c.nome} (Inativo)` : c.nome;
-        selectConsultor.appendChild(opt);
-    });
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const idUrl = urlParams.get('id');
-
-    if (idUrl && listaConsultores.some(c => c.id === idUrl)) {
-        selectConsultor.value = idUrl;
-    }
-
-    atualizarDashboard();
-}
-
-// 2. Coleta dados e calcula a classificação geral, KPIs e Métricas de Consistência
-async function atualizarDashboard() {
-    const consultorId = selectConsultor.value;
-    const mesEscolhido = selectMes.value;
-
-    const consultor = listaConsultores.find(c => c.id === consultorId);
-    if (!consultor) return;
-
-    consultorNomeDisplay.textContent = consultor.nome + (consultor.ativo === false ? " (Inativo)" : "");
-    if (consultor.foto && consultor.foto !== "default") {
-        consultorAvatarImg.src = consultor.foto;
-        consultorAvatarImg.style.display = 'block';
-        consultorAvatarPlaceholder.style.display = 'none';
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = "login.html";
     } else {
-        consultorAvatarPlaceholder.textContent = consultor.nome.charAt(0).toUpperCase();
-        consultorAvatarPlaceholder.style.display = 'flex';
-        consultorAvatarImg.style.display = 'none';
+        inicializar();
+    }
+});
+
+async function inicializar() {
+    try {
+        const snap = await getDocs(collection(db, "consultores"));
+        selectConsultor.innerHTML = '';
+        listaConsultores = [];
+
+        snap.forEach(d => {
+            const data = d.data();
+            listaConsultores.push({
+                id: d.id,
+                nome: data.nome || "Consultor Sem Nome",
+                foto: data.foto || "default"
+            });
+        });
+
+        listaConsultores.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+        listaConsultores.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.nome;
+            if (consultorIdAtual === c.id) opt.selected = true;
+            selectConsultor.appendChild(opt);
+        });
+
+        if (!consultorIdAtual && listaConsultores.length > 0) {
+            consultorIdAtual = listaConsultores[0].id;
+            selectConsultor.value = consultorIdAtual;
+        }
+
+        carregarDadosConsultor();
+    } catch (err) {
+        console.error("Erro ao inicializar:", err);
+    }
+}
+
+async function carregarDadosConsultor() {
+    if (!consultorIdAtual) return;
+
+    const consultorObj = listaConsultores.find(c => c.id === consultorIdAtual);
+    const nomeConsultor = consultorObj ? consultorObj.nome : "Consultor";
+
+    if (nomeDisplay) nomeDisplay.textContent = nomeConsultor;
+
+    if (consultorObj && consultorObj.foto && consultorObj.foto !== "default") {
+        avatarImg.src = consultorObj.foto;
+        avatarImg.style.display = 'block';
+        avatarPlaceholder.style.display = 'none';
+    } else {
+        avatarPlaceholder.textContent = nomeConsultor.charAt(0).toUpperCase();
+        avatarPlaceholder.style.display = 'flex';
+        avatarImg.style.display = 'none';
     }
 
-    const snapHistoricos = await getDocs(collection(db, "historicos"));
-    const docsDoMes = [];
-    const acumuladoMensalGeral = new Map();
+    processarMetricasMes(nomeConsultor);
+}
 
-    snapHistoricos.forEach((docSnap) => {
-        const dataId = docSnap.id;
-        if (dataId.startsWith(mesEscolhido)) {
-            const docData = docSnap.data();
-            docsDoMes.push({ dataId, docData });
+async function processarMetricasMes(nomeConsultor) {
+    const mesEscolhido = selectMes ? selectMes.value : mesPadrao;
 
-            let ranking = docData.ranking || [];
-            if (!Array.isArray(ranking) && typeof ranking === 'object') {
-                ranking = Object.values(ranking);
+    try {
+        const qVendas = query(
+            collection(db, "vendas"),
+            where("mesRef", "==", mesEscolhido)
+        );
+        const snapVendas = await getDocs(qVendas);
+
+        const todasVendasMes = [];
+        listaContratosConsultor = [];
+
+        snapVendas.forEach(d => {
+            const v = { id: d.id, ...d.data() };
+            todasVendasMes.push(v);
+            if (v.consultorNome === nomeConsultor) {
+                listaContratosConsultor.push(v);
+            }
+        });
+
+        // 1. Mapear todas as datas do mês
+        const setDatas = new Set();
+        todasVendasMes.forEach(v => {
+            if (v.data) setDatas.add(v.data);
+        });
+        const datasOrdenadas = Array.from(setDatas).sort();
+
+        // 2. Contabilizar vendas diárias e ranking por dia
+        const vendasPorDia = {};
+        const rankingPorDia = {};
+
+        datasOrdenadas.forEach(d => {
+            vendasPorDia[d] = 0;
+            rankingPorDia[d] = {};
+        });
+
+        todasVendasMes.forEach(v => {
+            if (v.status === "CONCLUIDO" && v.data) {
+                const cNome = v.consultorNome;
+                rankingPorDia[v.data][cNome] = (rankingPorDia[v.data][cNome] || 0) + 1;
+                if (cNome === nomeConsultor) {
+                    vendasPorDia[v.data] = (vendasPorDia[v.data] || 0) + 1;
+                }
+            }
+        });
+
+        // 3. Montar dados para os Gráficos
+        const labelsDias = [];
+        const dadosVendas = [];
+        const dadosPosicoes = [];
+
+        let totalConcluidas = 0;
+        let diasComVenda = 0;
+        let diasNoPodio = 0;
+        let melhorQtd = -1;
+        let melhorDataStr = "-";
+        let piorQtd = 999999;
+        let piorDataStr = "-";
+
+        datasOrdenadas.forEach(d => {
+            const p = d.split('-');
+            const diaFormatado = `${p[2]}/${p[1]}`;
+            labelsDias.push(diaFormatado);
+
+            const qtdDia = vendasPorDia[d] || 0;
+            dadosVendas.push(qtdDia);
+            totalConcluidas += qtdDia;
+
+            if (qtdDia > 0) diasComVenda++;
+
+            // Posição no dia
+            const rankingDiaOrdenado = Object.entries(rankingPorDia[d]).sort((a, b) => b[1] - a[1]);
+            const index = rankingDiaOrdenado.findIndex(item => item[0] === nomeConsultor);
+            const posDia = index >= 0 ? (index + 1) : rankingDiaOrdenado.length + 1;
+
+            dadosPosicoes.push(qtdDia > 0 ? posDia : null);
+
+            if (posDia <= 3 && qtdDia > 0) {
+                diasNoPodio++;
             }
 
-            ranking.forEach(r => {
-                const idChave = r.id || r.nome;
-                const totalAtual = acumuladoMensalGeral.get(idChave) || 0;
-                acumuladoMensalGeral.set(idChave, totalAtual + (r.vendas || 0));
-            });
-        }
-    });
+            if (qtdDia > melhorQtd && qtdDia > 0) {
+                melhorQtd = qtdDia;
+                melhorDataStr = `${diaFormatado} (${qtdDia})`;
+            }
 
-    const arrayAcumulado = Array.from(acumuladoMensalGeral.entries())
-        .map(([id, vendas]) => ({ id, vendas }))
-        .sort((a, b) => b.vendas - a.vendas);
+            if (qtdDia < piorQtd && qtdDia > 0) {
+                piorQtd = qtdDia;
+                piorDataStr = `${diaFormatado} (${qtdDia})`;
+            }
+        });
 
-    const indexRankingGeral = arrayAcumulado.findIndex(item => item.id === consultor.id || item.id === consultor.nome);
-    const posicaoGeral = indexRankingGeral >= 0 ? indexRankingGeral + 1 : listaConsultores.length;
+        const totalCiclos = datasOrdenadas.length;
+        const mediaPorCiclo = totalCiclos > 0 ? (totalConcluidas / totalCiclos).toFixed(1) : "0.0";
+        const diasZerados = totalCiclos - diasComVenda;
+        const pctPodio = totalCiclos > 0 ? Math.round((diasNoPodio / totalCiclos) * 100) : 0;
+        const pctAtivos = totalCiclos > 0 ? Math.round((diasComVenda / totalCiclos) * 100) : 0;
 
-    badgePosicaoContainer.innerHTML = obterMedalhaOuPosicaoMensal(posicaoGeral);
+        if (kpiTotalVendas) kpiTotalVendas.textContent = totalConcluidas;
+        if (kpiMediaVendas) kpiMediaVendas.textContent = mediaPorCiclo;
+        if (kpiMelhorDia) kpiMelhorDia.textContent = melhorQtd > 0 ? melhorDataStr : "-";
+        if (kpiPiorDia) kpiPiorDia.textContent = piorQtd !== 999999 ? piorDataStr : "-";
 
-    docsDoMes.sort((a, b) => a.dataId.localeCompare(b.dataId));
+        if (kpiPodioDias) kpiPodioDias.textContent = `${diasNoPodio} dias`;
+        if (kpiPodioPorcentagem) kpiPodioPorcentagem.textContent = `${pctPodio}% dos ciclos`;
+        if (kpiAtivosDias) kpiAtivosDias.textContent = `${diasComVenda} dias`;
+        if (kpiAtivosPorcentagem) kpiAtivosPorcentagem.textContent = `${pctAtivos}% dos ciclos`;
+        if (kpiZeradosDias) kpiZeradosDias.textContent = `${diasZerados} dias`;
 
-    const labelsDias = [];
-    const valoresVendas = [];
-    const valoresPosicoes = [];
-    dadosHistoricoConsultor = [];
+        // 4. Posição Geral no Mês
+        const acumuladoGeral = {};
+        todasVendasMes.forEach(v => {
+            if (v.status === "CONCLUIDO") {
+                acumuladoGeral[v.consultorNome] = (acumuladoGeral[v.consultorNome] || 0) + 1;
+            }
+        });
 
-    let somaTotal = 0;
-    let melhorVenda = -1;
-    let melhorDiaTexto = "-";
-    let piorVenda = 999999;
-    let piorDiaTexto = "-";
-    let diasComRegistro = 0;
-    let totalMaxConsultores = 10;
+        const rankingGeralOrdenado = Object.keys(acumuladoGeral).sort((a, b) => acumuladoGeral[b] - acumuladoGeral[a]);
+        const posicaoMes = rankingGeralOrdenado.indexOf(nomeConsultor) + 1;
 
-    let totalDiasNoMes = docsDoMes.length;
-    let diasNoPodio = 0;
-    let diasAtivosComVenda = 0;
-    let diasZerados = 0;
-
-    docsDoMes.forEach(({ dataId, docData }) => {
-        let ranking = docData.ranking || [];
-
-        if (!Array.isArray(ranking) && typeof ranking === 'object') {
-            ranking = Object.values(ranking);
-        }
-
-        ranking.sort((a, b) => (b.vendas || 0) - (a.vendas || 0));
-        if (ranking.length > totalMaxConsultores) totalMaxConsultores = ranking.length;
-
-        const indexPos = ranking.findIndex(r => r.id === consultor.id || r.nome === consultor.nome);
-        const item = indexPos >= 0 ? ranking[indexPos] : null;
-        const qtd = item ? (item.vendas || 0) : 0;
-        const posicao = indexPos >= 0 ? indexPos + 1 : null;
-
-        const diaFormatado = dataId.split('-')[2] + '/' + dataId.split('-')[1];
-        labelsDias.push(diaFormatado);
-        valoresVendas.push(qtd);
-        valoresPosicoes.push(posicao);
-
-        dadosHistoricoConsultor.push({ data: dataId, vendas: qtd, posicao: posicao || '-' });
-
-        somaTotal += qtd;
-        if (qtd > 0) {
-            diasComRegistro++;
-            diasAtivosComVenda++;
-        } else {
-            diasZerados++;
+        if (badgePosicaoContainer) {
+            badgePosicaoContainer.textContent = posicaoMes > 0 ? `${posicaoMes}º Lugar Geral no Mês` : 'Sem classificação';
         }
 
-        if (posicao && posicao <= 3 && qtd > 0) {
-            diasNoPodio++;
-        }
-
-        if (qtd > melhorVenda) {
-            melhorVenda = qtd;
-            melhorDiaTexto = `${diaFormatado} (${qtd})`;
-        }
-
-        if (qtd < piorVenda) {
-            piorVenda = qtd;
-            piorDiaTexto = `${diaFormatado} (${qtd})`;
-        }
-    });
-
-    kpiTotalVendas.textContent = somaTotal;
-    const media = diasComRegistro > 0 ? (somaTotal / diasComRegistro).toFixed(1) : "0.0";
-    kpiMediaVendas.textContent = media;
-    kpiMelhorDia.textContent = melhorVenda >= 0 ? melhorDiaTexto : "-";
-    kpiPiorDia.textContent = piorVenda < 999999 ? piorDiaTexto : "-";
-
-    // Atualização da Box 2: Consistência
-    kpiPodioDias.textContent = `${diasNoPodio} ${diasNoPodio === 1 ? 'dia' : 'dias'}`;
-    const pctPodio = totalDiasNoMes > 0 ? Math.round((diasNoPodio / totalDiasNoMes) * 100) : 0;
-    kpiPodioPorcentagem.textContent = `${pctPodio}% dos ciclos`;
-
-    kpiAtivosDias.textContent = `${diasAtivosComVenda} ${diasAtivosComVenda === 1 ? 'dia' : 'dias'}`;
-    const pctAtivos = totalDiasNoMes > 0 ? Math.round((diasAtivosComVenda / totalDiasNoMes) * 100) : 0;
-    kpiAtivosPorcentagem.textContent = `${pctAtivos}% dos ciclos`;
-
-    kpiZeradosDias.textContent = `${diasZerados} ${diasZerados === 1 ? 'dia' : 'dias'}`;
-
-    renderizarGraficoVendas(labelsDias, valoresVendas, consultor.nome);
-    renderizarGraficoPosicoes(labelsDias, valoresPosicoes, consultor.nome, totalMaxConsultores);
+        renderizarGraficoVendas(labelsDias, dadosVendas, nomeConsultor);
+        renderizarGraficoPosicoes(labelsDias, dadosPosicoes, nomeConsultor);
+        renderizarExtratoClientes();
+    } catch (err) {
+        console.error("Erro ao processar métricas do consultor:", err);
+    }
 }
 
-// Gráfico 1: Volume de Vendas
-function renderizarGraficoVendas(labels, data, nomeConsultor) {
-    const ctx = document.getElementById('meuGrafico').getContext('2d');
-    const corTema = obterCorDestaque();
-
-    if (chartVendasInstance) {
-        chartVendasInstance.destroy();
-    }
+function renderizarGraficoVendas(labels, data, nome) {
+    const canvas = document.getElementById('meuGrafico');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (chartVendasInstance) chartVendasInstance.destroy();
 
     chartVendasInstance = new Chart(ctx, {
-        type: tipoGrafico,
+        type: tipoGraficoVendas,
         data: {
-            labels: labels.length > 0 ? labels : ['Sem dados'],
+            labels: labels,
             datasets: [{
-                label: `Vendas de ${nomeConsultor}`,
-                data: data.length > 0 ? data : [0],
-                backgroundColor: tipoGrafico === 'bar' ? `${corTema}cc` : `${corTema}22`,
-                borderColor: corTema,
+                label: `Vendas de ${nome}`,
+                data: data,
+                backgroundColor: tipoGraficoVendas === 'bar' ? '#38bdf8' : 'rgba(56, 189, 248, 0.15)',
+                borderColor: '#38bdf8',
                 borderWidth: 2,
-                borderRadius: tipoGrafico === 'bar' ? 6 : 0,
-                fill: tipoGrafico === 'line',
+                borderRadius: 5,
                 tension: 0.35,
-                pointBackgroundColor: corTema,
-                pointRadius: 5
+                fill: tipoGraficoVendas === 'line',
+                pointRadius: tipoGraficoVendas === 'line' ? 3 : undefined
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    labels: { color: getComputedStyle(document.body).getPropertyValue('--text-main').trim() || '#fff' }
-                }
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        color: getComputedStyle(document.body).getPropertyValue('--text-muted').trim() || '#94a3b8'
-                    },
+                    ticks: { stepSize: 1, color: '#94a3b8' },
                     grid: { color: 'rgba(255, 255, 255, 0.06)' }
                 },
                 x: {
-                    ticks: {
-                        color: getComputedStyle(document.body).getPropertyValue('--text-muted').trim() || '#94a3b8'
-                    },
+                    ticks: { color: '#94a3b8', font: { size: 10 } },
                     grid: { display: false }
                 }
             }
@@ -299,66 +300,55 @@ function renderizarGraficoVendas(labels, data, nomeConsultor) {
     });
 }
 
-// Gráfico 2: Evolução de Posição
-function renderizarGraficoPosicoes(labels, data, nomeConsultor, totalConsultores) {
-    const ctx = document.getElementById('graficoPosicoes').getContext('2d');
-    const corSecundaria = obterCorSecundaria();
-
-    if (chartPosicaoInstance) {
-        chartPosicaoInstance.destroy();
-    }
+function renderizarGraficoPosicoes(labels, dataPosicoes, nome) {
+    const canvas = document.getElementById('graficoPosicao');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (chartPosicaoInstance) chartPosicaoInstance.destroy();
 
     chartPosicaoInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels.length > 0 ? labels : ['Sem dados'],
+            labels: labels,
             datasets: [{
-                label: `Posição de ${nomeConsultor}`,
-                data: data.length > 0 ? data : [1],
-                borderColor: corSecundaria,
-                backgroundColor: `${corSecundaria}18`,
+                label: `Posição de ${nome}`,
+                data: dataPosicoes,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
                 borderWidth: 2.5,
                 fill: true,
                 tension: 0.3,
-                pointBackgroundColor: corSecundaria,
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 1.5,
-                pointRadius: 6,
-                pointHoverRadius: 8
+                spanGaps: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#10b981',
+                pointHoverRadius: 6
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    labels: { color: getComputedStyle(document.body).getPropertyValue('--text-main').trim() || '#fff' }
-                },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
-                            const val = context.parsed.y;
-                            return ` Posição: ${val}º Lugar`;
-                        }
+                        label: (ctx) => `${ctx.raw}º Lugar`
                     }
                 }
             },
             scales: {
                 y: {
-                    reverse: true,
+                    reverse: true, // 1º Lugar no topo
+                    beginAtZero: false,
                     min: 1,
-                    max: Math.max(5, totalConsultores),
                     ticks: {
                         stepSize: 1,
-                        callback: (val) => `${val}º`,
-                        color: getComputedStyle(document.body).getPropertyValue('--text-muted').trim() || '#94a3b8'
+                        color: '#94a3b8',
+                        callback: (v) => `${v}º`
                     },
                     grid: { color: 'rgba(255, 255, 255, 0.06)' }
                 },
                 x: {
-                    ticks: {
-                        color: getComputedStyle(document.body).getPropertyValue('--text-muted').trim() || '#94a3b8'
-                    },
+                    ticks: { color: '#94a3b8', font: { size: 10 } },
                     grid: { display: false }
                 }
             }
@@ -366,41 +356,91 @@ function renderizarGraficoPosicoes(labels, data, nomeConsultor, totalConsultores
     });
 }
 
-// Event Listeners
-selectConsultor.addEventListener('change', atualizarDashboard);
-selectMes.addEventListener('change', atualizarDashboard);
+function renderizarExtratoClientes() {
+    if (!tbodyExtrato) return;
+    tbodyExtrato.innerHTML = '';
 
-btnChartBar.addEventListener('click', () => {
-    tipoGrafico = 'bar';
-    btnChartBar.classList.add('active');
-    btnChartLine.classList.remove('active');
-    atualizarDashboard();
-});
+    listaContratosConsultor.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
 
-btnChartLine.addEventListener('click', () => {
-    tipoGrafico = 'line';
-    btnChartLine.classList.add('active');
-    btnChartBar.classList.remove('active');
-    atualizarDashboard();
-});
+    if (extratoQtdTotal) {
+        extratoQtdTotal.textContent = `${listaContratosConsultor.length} contratos`;
+    }
 
-btnExportarConsultor.addEventListener('click', () => {
-    if (dadosHistoricoConsultor.length === 0) {
-        alert("Sem dados no período para exportar.");
+    if (listaContratosConsultor.length === 0) {
+        tbodyExtrato.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum contrato registrado para este mês.</td></tr>`;
         return;
     }
-    const nome = consultorNomeDisplay.textContent;
-    let csv = "data:text/csv;charset=utf-8,Data,Consultor,Vendas,Posicao\n";
-    dadosHistoricoConsultor.forEach(d => {
-        csv += `${d.data},"${nome}",${d.vendas},${d.posicao}\n`;
-    });
-    const encoded = encodeURI(csv);
-    const link = document.createElement("a");
-    link.href = encoded;
-    link.download = `Desempenho_${nome}_${selectMes.value}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-});
 
-carregarConsultores();
+    listaContratosConsultor.forEach(item => {
+        const partes = (item.data || '').split('-');
+        const dataBr = partes.length === 3 ? `${partes[2]}/${partes[1]}` : (item.data || '-');
+
+        const tagTipo = item.tipo === 'REFILIACAO'
+            ? `<span class="badge-tag badge-refiliacao">REFILIAÇÃO</span>`
+            : `<span class="badge-tag badge-filiacao">FILIAÇÃO</span>`;
+
+        let tagMod = `<span class="badge-tag badge-credito">CRÉDITO</span>`;
+        if (item.modalidade === 'DÉBITO') tagMod = `<span class="badge-tag badge-debito">DÉBITO</span>`;
+        else if (item.modalidade === 'BOLETO') tagMod = `<span class="badge-tag badge-boleto">BOLETO</span>`;
+
+        const tagStatus = item.status === 'CONCLUIDO'
+            ? `<span class="badge-tag badge-concluido">CONCLUÍDO</span>`
+            : `<span class="badge-tag badge-retido">NÃO CONCLUÍDO</span>`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="color: var(--text-muted); font-size: 0.82rem;">${dataBr}</td>
+            <td style="font-family: monospace; font-weight: 700;">${item.matricula || '-'}</td>
+            <td style="font-weight: 600;">${item.clienteNome || 'Cliente'}</td>
+            <td style="text-align: center;">${tagTipo}</td>
+            <td style="text-align: center;">${tagMod}</td>
+            <td style="text-align: center;">${tagStatus}</td>
+        `;
+        tbodyExtrato.appendChild(tr);
+    });
+}
+
+if (btnChartBar) {
+    btnChartBar.addEventListener('click', () => {
+        tipoGraficoVendas = 'bar';
+        btnChartBar.classList.add('active');
+        if (btnChartLine) btnChartLine.classList.remove('active');
+        carregarDadosConsultor();
+    });
+}
+
+if (btnChartLine) {
+    btnChartLine.addEventListener('click', () => {
+        tipoGraficoVendas = 'line';
+        btnChartLine.classList.add('active');
+        if (btnChartBar) btnChartBar.classList.remove('active');
+        carregarDadosConsultor();
+    });
+}
+
+if (selectConsultor) {
+    selectConsultor.addEventListener('change', (e) => {
+        consultorIdAtual = e.target.value;
+        carregarDadosConsultor();
+    });
+}
+
+if (selectMes) {
+    selectMes.addEventListener('change', carregarDadosConsultor);
+}
+
+if (btnExportarConsultor) {
+    btnExportarConsultor.addEventListener('click', () => {
+        if (listaContratosConsultor.length === 0) return;
+        let csv = "data:text/csv;charset=utf-8,Data,Matricula,Cliente,Tipo,Modalidade,Status\n";
+        listaContratosConsultor.forEach(d => {
+            csv += `"${d.data}","${d.matricula}","${d.clienteNome}","${d.tipo}","${d.modalidade}","${d.status}"\n`;
+        });
+        const link = document.createElement("a");
+        link.href = encodeURI(csv);
+        link.download = `Extrato_${nomeDisplay.textContent}_${selectMes.value}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+}

@@ -5,6 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel da Supervisora</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .badge-motivo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--box-bg);
+            border: 1px solid var(--box-border);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: var(--text-main);
+        }
+
+        .btn-estornar-hist {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #ef4444;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-estornar-hist:hover {
+            background: #ef4444;
+            color: #ffffff;
+            transform: scale(1.04);
+        }
+    </style>
 </head>
 <body>
     <!-- Overlay Escuro da Sidebar -->
@@ -43,6 +74,22 @@
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <span style="font-size: 1.1rem;">📈</span>
                     <span>Comparativo da Equipe</span>
+                </div>
+            </a>
+
+            <!-- Botão de Acesso à Auditoria de Cancelamentos -->
+            <a href="cancelamentos.html" class="nav-box-btn" style="text-decoration: none;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 1.1rem;">🚫</span>
+                    <span>Vendas Canceladas</span>
+                </div>
+            </a>
+
+            <!-- Botão de Acesso ao Importador em Lote -->
+            <a href="importador.html" class="nav-box-btn" style="text-decoration: none;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 1.1rem;">📂</span>
+                    <span>Importar Planilhas (CSV)</span>
                 </div>
             </a>
 
@@ -193,7 +240,7 @@
     </div>
 
     <!-- Modal 4: Confirmação Customizada -->
-    <div id="modal-confirmacao" class="modal-overlay" style="z-index: 1003;">
+    <div id="modal-confirmacao" class="modal-overlay" style="z-index: 1005;">
         <div class="modal-content" style="max-width: 380px; text-align: center;">
             <div style="font-size: 2.2rem; margin-bottom: 8px;" id="modal-conf-icone">⚠️</div>
             <h3 id="modal-conf-titulo" style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 8px;">Confirmação</h3>
@@ -203,6 +250,43 @@
                 <button id="btn-conf-cancelar" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--box-border); background: var(--box-bg); color: var(--text-main); cursor: pointer; font-weight: 600; font-size: 0.88rem;">Cancelar</button>
                 <button id="btn-conf-confirmar" style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: #ef4444; color: white; cursor: pointer; font-weight: bold; font-size: 0.88rem;">Confirmar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Cancelar / Estornar Venda Retroativa de Ciclo Fechado -->
+    <div id="modal-estorno" class="modal-overlay" style="z-index: 1003;">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>Estornar Venda de Ciclo Fechado</h3>
+                <button id="btn-fechar-estorno" class="btn-fechar-sidebar" title="Fechar">&times;</button>
+            </div>
+            <form id="form-estorno" style="display: flex; flex-direction: column; gap: 12px;">
+                <input type="hidden" id="estorno-data-ciclo">
+                <input type="hidden" id="estorno-consultor-id">
+
+                <div style="background: var(--box-bg); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--box-border);">
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Consultor: <strong id="estorno-nome-consultor" style="color: var(--text-main);"></strong></div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Data do Ciclo: <strong id="estorno-data-formatada" style="color: var(--text-main);"></strong></div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Vendas Registradas: <strong id="estorno-vendas-atuais" style="color: #3b82f6;"></strong></div>
+                </div>
+
+                <div>
+                    <label for="select-motivo-cancelamento" style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 700;">MOTIVO DO CANCELAMENTO:</label>
+                    <select id="select-motivo-cancelamento" required style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); outline: none; background: var(--input-bg); color: var(--text-main); font-size: 0.88rem;">
+                        <!-- Preenchido dinamicamente -->
+                    </select>
+                </div>
+
+                <div>
+                    <label for="estorno-qtd" style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 700;">QUANTIDADE A CANCELAR:</label>
+                    <input type="number" id="estorno-qtd" min="1" value="1" required style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); outline: none; background: var(--input-bg); color: var(--text-main); font-size: 0.9rem;">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 6px;">
+                    <button type="button" id="btn-cancelar-estorno" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--box-border); background: var(--box-bg); color: var(--text-main); cursor: pointer; font-weight: 600; font-size: 0.88rem;">Voltar</button>
+                    <button type="submit" style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: #ef4444; color: white; cursor: pointer; font-weight: bold; font-size: 0.88rem;">Confirmar Cancelamento</button>
+                </div>
+            </form>
         </div>
     </div>
     

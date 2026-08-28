@@ -73,6 +73,19 @@ const listaHistoricoRanking = document.getElementById('lista-historico-ranking')
 const historicoVazio = document.getElementById('historico-vazio');
 const btnExportarCsv = document.getElementById('btn-exportar-csv');
 
+// Elementos - Estorno Retroativo
+const modalEstorno = document.getElementById('modal-estorno');
+const btnFecharEstorno = document.getElementById('btn-fechar-estorno');
+const btnCancelarEstorno = document.getElementById('btn-cancelar-estorno');
+const formEstorno = document.getElementById('form-estorno');
+const estornoDataCiclo = document.getElementById('estorno-data-ciclo');
+const estornoConsultorId = document.getElementById('estorno-consultor-id');
+const estornoNomeConsultor = document.getElementById('estorno-nome-consultor');
+const estornoDataFormatada = document.getElementById('estorno-data-formatada');
+const estornoVendasAtuais = document.getElementById('estorno-vendas-atuais');
+const selectMotivoCancelamento = document.getElementById('select-motivo-cancelamento');
+const estornoQtd = document.getElementById('estorno-qtd');
+
 const modalConfirmacao = document.getElementById('modal-confirmacao');
 const modalConfTitulo = document.getElementById('modal-conf-titulo');
 const modalConfMensagem = document.getElementById('modal-conf-mensagem');
@@ -308,7 +321,7 @@ function carregarDashboard() {
             });
         });
 
-        // 2. Modal Gerenciar Usuários (Lista Ativos e Inativos com Confirmação na Reativação)
+        // 2. Modal Gerenciar Usuários
         listaGerenciar.innerHTML = '';
         const todosOrdenados = [...todosConsultores].sort((a, b) => {
             if ((a.ativo !== false) === (b.ativo !== false)) {
@@ -362,7 +375,6 @@ function carregarDashboard() {
             });
         });
 
-        // Desativação (Soft Delete)
         document.querySelectorAll('.btn-desativar-usr').forEach(botao => {
             botao.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -385,7 +397,6 @@ function carregarDashboard() {
             });
         });
 
-        // Reativação com Confirmação
         document.querySelectorAll('.btn-reativar-usr').forEach(botao => {
             botao.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -406,7 +417,7 @@ function carregarDashboard() {
             });
         });
 
-        // 3. Ranking em Tempo Real (Apenas Ativos)
+        // 3. Ranking em Tempo Real
         const consultoresRanking = [...consultoresAtivos].sort((a, b) => {
             const vendasA = a.vendas || 0;
             const vendasB = b.vendas || 0;
@@ -546,8 +557,31 @@ async function registrarVenda(id, nome, quantidade) {
     });
 }
 
+// ==============================================================================
+// CARREGAMENTO DE MOTIVOS DE CANCELAMENTO (PARA O MODAL DE ESTORNO)
+// ==============================================================================
+async function carregarMotivosCancelamento() {
+    const snap = await getDocs(collection(db, "motivos_cancelamento"));
+    selectMotivoCancelamento.innerHTML = "";
+
+    if (snap.empty) {
+        const padroes = ["Pós-venda não confirmado", "Documentação faltante", "Método de pagamento rejeitado"];
+        for (const texto of padroes) {
+            await addDoc(collection(db, "motivos_cancelamento"), { motivo: texto });
+        }
+        return carregarMotivosCancelamento();
+    }
+
+    snap.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d.data().motivo;
+        opt.textContent = d.data().motivo;
+        selectMotivoCancelamento.appendChild(opt);
+    });
+}
+
 // ==========================================================================
-// CONSULTA HISTÓRICO POR DATA
+// CONSULTA HISTÓRICO POR DATA COM ESTORNO
 // ==========================================================================
 btnMenuHistorico.addEventListener('click', () => {
     fecharSidebar();
@@ -652,6 +686,8 @@ async function carregarHistoricoPorData(dataString) {
 
         const li = document.createElement('li');
         li.className = `item-gerenciamento ${totalVendas === 0 ? 'item-historico-zerado' : ''}`;
+        
+        // Injeção do botão "Estornar" diretamente no grid do Histórico
         li.innerHTML = `
             <div class="item-gerenciamento-info">
                 <div class="posicao-box" style="width: 28px; display: flex; justify-content: center; align-items: center;">
@@ -660,13 +696,105 @@ async function carregarHistoricoPorData(dataString) {
                 ${visualFoto}
                 <span style="font-weight: 600; color: var(--text-main); font-size: 0.92rem;">${item.nome}</span>
             </div>
-            <span style="font-weight: 700; color: var(--text-main); font-size: 1.05rem; padding-right: 6px;">
-                ${totalVendas} ${totalVendas === 1 ? 'venda' : 'vendas'}
-            </span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-weight: 700; color: var(--text-main); font-size: 1.05rem; padding-right: 6px;">
+                    ${totalVendas} ${totalVendas === 1 ? 'venda' : 'vendas'}
+                </span>
+                ${totalVendas > 0 ? `<button class="btn-estornar-hist" data-id="${item.id}" data-nome="${item.nome}" data-vendas="${totalVendas}">Estornar</button>` : ''}
+            </div>
         `;
         listaHistoricoRanking.appendChild(li);
     });
+
+    // Eventos para abrir modal de estorno
+    document.querySelectorAll('.btn-estornar-hist').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            abrirModalEstorno({
+                dataCiclo: filtroDataHistorico.value,
+                consultorId: e.target.dataset.id,
+                consultorNome: e.target.dataset.nome,
+                vendasAtuais: parseInt(e.target.dataset.vendas, 10)
+            });
+        });
+    });
 }
+
+// ==============================================================================
+// LÓGICA DE ESTORNO
+// ==============================================================================
+async function abrirModalEstorno({ dataCiclo, consultorId, consultorNome, vendasAtuais }) {
+    await carregarMotivosCancelamento();
+    estornoDataCiclo.value = dataCiclo;
+    estornoConsultorId.value = consultorId;
+    estornoNomeConsultor.textContent = consultorNome;
+    estornoVendasAtuais.textContent = `${vendasAtuais} vendas`;
+
+    const partes = dataCiclo.split("-");
+    estornoDataFormatada.textContent = `${partes[2]}/${partes[1]}/${partes[0]}`;
+
+    estornoQtd.max = vendasAtuais;
+    estornoQtd.value = 1;
+
+    modalEstorno.classList.add("active");
+}
+
+btnFecharEstorno.addEventListener('click', () => modalEstorno.classList.remove('active'));
+btnCancelarEstorno.addEventListener('click', () => modalEstorno.classList.remove('active'));
+
+formEstorno.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const dataCiclo = estornoDataCiclo.value;
+    const consultorId = estornoConsultorId.value;
+    const consultorNome = estornoNomeConsultor.textContent;
+    const motivo = selectMotivoCancelamento.value;
+    const qtd = parseInt(estornoQtd.value, 10);
+
+    modalEstorno.classList.remove("active");
+
+    exibirConfirmacao({
+        titulo: "Confirmar Estorno",
+        mensagem: `Deseja realmente cancelar ${qtd} venda(s) de ${consultorNome} no ciclo de ${estornoDataFormatada.textContent}? Motivo: ${motivo}`,
+        icone: "⚠️",
+        textoBotao: "Confirmar",
+        corBotao: "#ef4444",
+        onConfirmar: async () => {
+            const docRef = doc(db, "historicos", dataCiclo);
+            const snap = await getDoc(docRef);
+
+            if (!snap.exists()) return;
+
+            let ranking = snap.data().ranking || [];
+            if (!Array.isArray(ranking) && typeof ranking === 'object') ranking = Object.values(ranking);
+
+            const index = ranking.findIndex(r => (r.id === consultorId || r.nome === consultorNome));
+            if (index >= 0) {
+                ranking[index].vendas = Math.max(0, (ranking[index].vendas || 0) - qtd);
+                ranking.sort((a, b) => (b.vendas || 0) - (a.vendas || 0));
+
+                await updateDoc(docRef, {
+                    ranking: ranking,
+                    ultimaAtualizacao: Date.now()
+                });
+
+                const authEmail = auth.currentUser ? auth.currentUser.email : "admin";
+
+                await addDoc(collection(db, "auditoria_estornos"), {
+                    dataCiclo: dataCiclo,
+                    consultorId: consultorId,
+                    consultorNome: consultorNome,
+                    quantidadeEstornada: qtd,
+                    motivo: motivo,
+                    autorEmail: authEmail,
+                    realizadoEm: Date.now()
+                });
+
+                alert("Estorno realizado com sucesso!");
+                carregarHistoricoPorData(dataCiclo); 
+            }
+        }
+    });
+});
 
 btnExportarCsv.addEventListener('click', () => {
     const dados = dadosHistoricoCarregados.length > 0 ? dadosHistoricoCarregados : dadosCicloAtual;

@@ -9,10 +9,12 @@
     <style>
         .analytics-container {
             width: 100%;
-            max-width: 1150px;
+            max-width: 1250px;
             display: flex;
             flex-direction: column;
             gap: 20px;
+            box-sizing: border-box;
+            padding-bottom: 40px;
         }
 
         .analytics-header-bar {
@@ -63,9 +65,7 @@
         }
 
         @media (max-width: 950px) {
-            .split-layout {
-                grid-template-columns: 1fr;
-            }
+            .split-layout { grid-template-columns: 1fr; }
         }
 
         .sidebar-column {
@@ -91,7 +91,7 @@
             height: 88px;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid var(--box-border-hover);
+            border: 3px solid #38bdf8;
         }
 
         .profile-placeholder-lg {
@@ -150,6 +150,12 @@
             font-size: 0.88rem;
             outline: none;
             transition: all 0.2s ease;
+            color-scheme: dark;
+        }
+
+        body.theme-light .select-custom,
+        body.theme-refuturiza .select-custom {
+            color-scheme: light;
         }
 
         .select-destaque-consultor {
@@ -162,35 +168,6 @@
             color: #ffffff;
         }
 
-        .select-destaque-consultor:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.08);
-        }
-
-        .select-destaque-consultor option {
-            background-color: var(--sidebar-bg);
-            color: var(--text-main);
-            font-weight: 600;
-        }
-
-        body.theme-dracula .select-destaque-consultor {
-            background-color: #bd93f9;
-            color: #21222c;
-            box-shadow: 0 4px 16px rgba(189, 147, 249, 0.35);
-        }
-
-        body.theme-light .select-destaque-consultor {
-            background-color: #2563eb;
-            color: #ffffff;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
-        }
-
-        body.theme-refuturiza .select-destaque-consultor {
-            background-color: #ff4d00;
-            color: #ffffff;
-            box-shadow: 0 4px 16px rgba(255, 77, 0, 0.32);
-        }
-
         .consistency-card {
             background: var(--admin-card-bg);
             border: 1px solid var(--admin-border);
@@ -200,7 +177,6 @@
             flex-direction: column;
             justify-content: space-between;
             gap: 12px;
-            flex: 1;
         }
 
         .consistency-title {
@@ -252,9 +228,7 @@
         }
 
         @media (max-width: 760px) {
-            .kpi-row {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            .kpi-row { grid-template-columns: repeat(2, 1fr); }
         }
 
         .kpi-card {
@@ -265,11 +239,6 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            transition: transform 0.2s ease;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-2px);
         }
 
         .kpi-card-melhor {
@@ -278,13 +247,8 @@
             box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
         }
 
-        .kpi-card-melhor .kpi-title {
-            color: rgba(255, 255, 255, 0.88) !important;
-        }
-
-        .kpi-card-melhor .kpi-value {
+        .kpi-card-melhor .kpi-title, .kpi-card-melhor .kpi-value {
             color: #ffffff !important;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
         .kpi-card-pior {
@@ -293,13 +257,8 @@
             box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);
         }
 
-        .kpi-card-pior .kpi-title {
-            color: rgba(255, 255, 255, 0.88) !important;
-        }
-
-        .kpi-card-pior .kpi-value {
+        .kpi-card-pior .kpi-title, .kpi-card-pior .kpi-value {
             color: #ffffff !important;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
         .kpi-title {
@@ -324,7 +283,7 @@
             display: flex;
             flex-direction: column;
             gap: 14px;
-            min-height: 310px;
+            min-height: 280px;
         }
 
         .chart-header {
@@ -335,6 +294,7 @@
 
         .chart-header h3 {
             font-size: 1.02rem;
+            font-weight: 800;
             color: var(--text-main);
         }
 
@@ -347,31 +307,77 @@
         }
 
         .btn-toggle {
-            padding: 6px 12px;
+            padding: 5px 12px;
             border: none;
             background: transparent;
             color: var(--text-muted);
             font-size: 0.8rem;
-            font-weight: 600;
+            font-weight: 700;
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
         .btn-toggle.active {
-            background: #3b82f6;
-            color: #ffffff;
+            background: #38bdf8;
+            color: #0f172a;
         }
 
-        body.theme-refuturiza .btn-toggle.active {
-            background: #ff4d00;
+        /* Extrato de Clientes */
+        .table-card {
+            background: var(--admin-card-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
+
+        .tabela-contratos {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            text-align: left;
+        }
+
+        .tabela-contratos th {
+            padding: 10px 12px;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--box-border);
+            background: var(--box-bg);
+        }
+
+        .tabela-contratos td {
+            padding: 12px;
+            border-bottom: 1px solid var(--box-border);
+            color: var(--text-main);
+        }
+
+        .badge-tag {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .badge-filiacao { background: rgba(56, 189, 248, 0.16); color: #38bdf8; }
+        .badge-refiliacao { background: rgba(245, 158, 11, 0.16); color: #fbbf24; }
+        .badge-debito { background: rgba(16, 185, 129, 0.16); color: #34d399; }
+        .badge-credito { background: rgba(168, 85, 247, 0.16); color: #c084fc; }
+        .badge-boleto { background: rgba(234, 179, 8, 0.16); color: #facc15; }
+        .badge-concluido { background: rgba(16, 185, 129, 0.16); color: #10b981; }
+        .badge-retido { background: rgba(239, 68, 68, 0.16); color: #ef4444; }
     </style>
 </head>
 <body>
     <div class="analytics-container">
         
-        <!-- Header com Navegação Cruzada -->
+        <!-- Header -->
         <header class="analytics-header-bar">
             <div class="nav-links-group">
                 <a href="admin.html" class="btn-nav-action">
@@ -387,7 +393,7 @@
             <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Dashboard Individual</h2>
 
             <button id="btn-exportar-consultor" class="btn-acao-modal btn-acao-editar" style="padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
-                📥 Exportar CSV
+                📥 Exportar Extrato (CSV)
             </button>
         </header>
 
@@ -404,25 +410,17 @@
                         <h3 id="consultor-nome-display" style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">Carregando...</h3>
                         <p style="font-size: 0.8rem; color: var(--text-muted);">Consultor(a) de Vendas</p>
                         
-                        <div id="badge-posicao-container" class="badge-posicao-mensal">
-                            <!-- Preenchido dinamicamente -->
-                        </div>
+                        <div id="badge-posicao-container" class="badge-posicao-mensal">-</div>
                     </div>
 
                     <div class="filter-group">
                         <label class="filter-label" for="select-consultor">SELECIONAR CONSULTOR</label>
-                        <select id="select-consultor" class="select-custom select-destaque-consultor">
-                            <!-- Preenchido dinamicamente -->
-                        </select>
+                        <select id="select-consultor" class="select-custom select-destaque-consultor"></select>
                     </div>
 
                     <div class="filter-group">
                         <label class="filter-label" for="select-mes">MÊS DE REFERÊNCIA</label>
-                        <select id="select-mes" class="select-custom">
-                            <option value="2026-08">Agosto / 2026</option>
-                            <option value="2026-07">Julho / 2026</option>
-                            <option value="2026-06">Junho / 2026</option>
-                        </select>
+                        <input type="month" id="select-mes" class="select-custom">
                     </div>
                 </aside>
 
@@ -475,6 +473,7 @@
                     </div>
                 </div>
 
+                <!-- Gráfico 1: Volume Diário -->
                 <div class="chart-card">
                     <div class="chart-header">
                         <h3>Volume de Vendas Diárias</h3>
@@ -488,13 +487,39 @@
                     </div>
                 </div>
 
+                <!-- Gráfico 2: Evolução de Posição no Ranking Diário -->
                 <div class="chart-card">
                     <div class="chart-header">
                         <h3>Evolução de Posição no Ranking Diário</h3>
-                        <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: 600;">(1º Lugar no topo)</span>
+                        <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">(1º Lugar no topo)</span>
                     </div>
                     <div style="position: relative; flex: 1; width: 100%; min-height: 220px;">
-                        <canvas id="graficoPosicoes"></canvas>
+                        <canvas id="graficoPosicao"></canvas>
+                    </div>
+                </div>
+
+                <!-- Extrato de Contratos -->
+                <div class="table-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main);">Extrato de Clientes no Mês</h3>
+                        <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 700;" id="extrato-qtd-total">0 contratos</span>
+                    </div>
+                    <div style="max-height: 320px; overflow-y: auto;">
+                        <table class="tabela-contratos">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Matrícula</th>
+                                    <th>Cliente</th>
+                                    <th style="text-align: center;">Tipo</th>
+                                    <th style="text-align: center;">Pagamento</th>
+                                    <th style="text-align: center;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-extrato">
+                                <!-- Preenchido dinamicamente -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>
