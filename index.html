@@ -6,13 +6,14 @@
   <title>Ranking de Vendas - Tempo Real</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body class="theme-dracula">
 
   <div id="navbar-container"></div>
 
-  <!-- Toast de Notificação em Tempo Real -->
+  <!-- Toast de Notificação de Venda em Tempo Real -->
   <div id="toastNovaVenda" class="sale-toast" style="display: none;">
     <div class="toast-icon"><i class="fa-solid fa-bolt text-yellow"></i></div>
     <div class="toast-body">
@@ -29,8 +30,8 @@
         <div class="hero-title-wrap">
           <i class="fa-solid fa-trophy hero-trophy-icon"></i>
           <div>
-            <h2>Quadro de Liderança e Produção</h2>
-            <p class="subtitle-text">Acompanhamento ao vivo de volume, conversões e ranking da equipe.</p>
+            <h2>Quadro de Liderança e Gamificação</h2>
+            <p class="subtitle-text">Acompanhamento em tempo real de metas, pódio e performance individual.</p>
           </div>
         </div>
       </div>
@@ -44,13 +45,77 @@
           <i class="fa-solid fa-crown text-yellow"></i>
           <span>Líder do Dia: <strong id="heroLiderHoje" class="text-yellow">--</strong></span>
         </div>
+        <button class="btn btn-secondary-sm" id="btnModoTv" title="Ativar Modo TV / Tela Cheia">
+          <i class="fa-solid fa-tv"></i> Modo TV
+        </button>
       </div>
     </div>
 
-    <!-- Grid com as Boxes Lado a Lado -->
+    <!-- Grid Duplo de Metas da Equipe: Dinheiro (Esq) vs Quantidade (Dir) -->
+    <div class="goals-dual-grid mt-3">
+      
+      <!-- Meta 1: Financeira (R$) -->
+      <section class="card goal-card">
+        <div class="goal-header">
+          <div class="goal-title-area">
+            <i class="fa-solid fa-sack-dollar text-purple"></i>
+            <div>
+              <h4>Meta em Faturamento (<span id="txtMesMetaDinheiro">Mês Atual</span>)</h4>
+              <span class="subtitle-text" id="txtSubMetaDinheiro">Progresso financeiro acumulado</span>
+            </div>
+          </div>
+          <div class="goal-values">
+            <strong id="txtValorAtualMeta" class="text-green">R$ 0,00</strong>
+            <span class="goal-divider">/</span>
+            <span id="txtValorObjetivoMeta" class="text-muted">R$ 70.000,00</span>
+            <button class="btn-icon-action" id="btnEditarMeta" title="Alterar Meta Financeira (R$)">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <span class="badge badge-month" id="txtPercentualMeta">0%</span>
+          </div>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill fill-purple" id="barraProgressoMeta" style="width: 0%;">
+            <span class="progress-shine"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Meta 2: Quantidade de Contratos (Vendas) -->
+      <section class="card goal-card">
+        <div class="goal-header">
+          <div class="goal-title-area">
+            <i class="fa-solid fa-bullseye text-green"></i>
+            <div>
+              <h4>Meta em Contratos (<span id="txtMesMetaQtd">Mês Atual</span>)</h4>
+              <span class="subtitle-text" id="txtSubMetaQtd">Progresso em volume de vendas</span>
+            </div>
+          </div>
+          <div class="goal-values">
+            <strong id="txtQtdAtualMeta" class="text-green">0</strong>
+            <span class="goal-divider">/</span>
+            <span id="txtQtdObjetivoMeta" class="text-muted">1.000 vendas</span>
+            <button class="btn-icon-action" id="btnEditarMetaQtd" title="Alterar Meta por Quantidade de Vendas">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <span class="badge badge-date" id="txtPercentualMetaQtd">0%</span>
+          </div>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill fill-green" id="barraProgressoMetaQtd" style="width: 0%;">
+            <span class="progress-shine"></span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Grid dos Rankings com Filtros Retroativos -->
     <div class="rankings-dual-grid mt-4">
       
-      <!-- Box 1: Ranking Diário (Foco em Velocidade & Dia Atual) -->
+      <!-- Box 1: Ranking Diário -->
       <section class="card ranking-card ranking-card-diario">
         <div class="card-header">
           <div class="header-title">
@@ -59,13 +124,47 @@
             </div>
             <div>
               <h2>Ranking Diário</h2>
-              <span class="subtitle-text" id="labelDataHoje">--/--/----</span>
+              <input type="date" id="filtroDataDiario" class="date-selector-retro" />
             </div>
           </div>
           <span class="badge badge-date" id="badgeTotalDiario">0 Confirmadas</span>
         </div>
 
-        <div class="table-container">
+        <!-- Pódio Olímpico Diário -->
+        <div class="podium-container" id="podioDiarioContainer">
+          <div class="podium-slot slot-second" id="podioDiario2">
+            <div class="podium-avatar-wrap">
+              <div class="podium-medal-badge"><img src="icones/Prata.svg" alt="Prata" class="podium-svg-medal" /></div>
+              <div class="podium-avatar" id="avatarDiario2">--</div>
+            </div>
+            <span class="podium-name" id="nomeDiario2">--</span>
+            <span class="podium-score" id="scoreDiario2">0 vendas</span>
+            <div class="podium-step step-second">2º</div>
+          </div>
+
+          <div class="podium-slot slot-first" id="podioDiario1">
+            <div class="crown-icon-glow"><i class="fa-solid fa-crown text-yellow"></i></div>
+            <div class="podium-avatar-wrap leader-glow">
+              <div class="podium-medal-badge"><img src="icones/Ouro.svg" alt="Ouro" class="podium-svg-medal float-medal" /></div>
+              <div class="podium-avatar avatar-gold" id="avatarDiario1">--</div>
+            </div>
+            <span class="podium-name font-bold" id="nomeDiario1">--</span>
+            <span class="podium-score text-yellow" id="scoreDiario1">0 vendas</span>
+            <div class="podium-step step-first">1º</div>
+          </div>
+
+          <div class="podium-slot slot-third" id="podioDiario3">
+            <div class="podium-avatar-wrap">
+              <div class="podium-medal-badge"><img src="icones/Bronze.svg" alt="Bronze" class="podium-svg-medal" /></div>
+              <div class="podium-avatar" id="avatarDiario3">--</div>
+            </div>
+            <span class="podium-name" id="nomeDiario3">--</span>
+            <span class="podium-score" id="scoreDiario3">0 vendas</span>
+            <div class="podium-step step-third">3º</div>
+          </div>
+        </div>
+
+        <div class="table-container mt-3">
           <table class="data-table ranking-table">
             <thead>
               <tr>
@@ -77,13 +176,13 @@
               </tr>
             </thead>
             <tbody id="corpoRankingDiario">
-              <tr><td colspan="5" class="loading">Carregando ranking de hoje...</td></tr>
+              <tr><td colspan="5" class="loading">Carregando dados...</td></tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- Box 2: Ranking Mensal (Foco em Campeonato & Ciclo) -->
+      <!-- Box 2: Ranking Mensal -->
       <section class="card ranking-card ranking-card-mensal">
         <div class="card-header">
           <div class="header-title">
@@ -92,13 +191,60 @@
             </div>
             <div>
               <h2>Ranking Mensal</h2>
-              <span class="subtitle-text" id="labelMesAtual">Mês Atual</span>
+              <select id="filtroMesRanking" class="month-selector-retro">
+                <option value="0">Janeiro</option>
+                <option value="1">Fevereiro</option>
+                <option value="2">Março</option>
+                <option value="3">Abril</option>
+                <option value="4">Maio</option>
+                <option value="5">Junho</option>
+                <option value="6">Julho</option>
+                <option value="7">Agosto</option>
+                <option value="8">Setembro</option>
+                <option value="9">Outubro</option>
+                <option value="10">Novembro</option>
+                <option value="11">Dezembro</option>
+              </select>
             </div>
           </div>
           <span class="badge badge-month" id="badgeTotalMensal">0 Confirmadas</span>
         </div>
 
-        <div class="table-container">
+        <!-- Pódio Olímpico Mensal -->
+        <div class="podium-container" id="podioMensalContainer">
+          <div class="podium-slot slot-second" id="podioMensal2">
+            <div class="podium-avatar-wrap">
+              <div class="podium-medal-badge"><img src="icones/Prata.svg" alt="Prata" class="podium-svg-medal" /></div>
+              <div class="podium-avatar" id="avatarMensal2">--</div>
+            </div>
+            <span class="podium-name" id="nomeMensal2">--</span>
+            <span class="podium-score" id="scoreMensal2">0 vendas</span>
+            <div class="podium-step step-second">2º</div>
+          </div>
+
+          <div class="podium-slot slot-first" id="podioMensal1">
+            <div class="crown-icon-glow"><i class="fa-solid fa-crown text-yellow"></i></div>
+            <div class="podium-avatar-wrap leader-glow">
+              <div class="podium-medal-badge"><img src="icones/Ouro.svg" alt="Ouro" class="podium-svg-medal float-medal" /></div>
+              <div class="podium-avatar avatar-gold" id="avatarMensal1">--</div>
+            </div>
+            <span class="podium-name font-bold" id="nomeMensal1">--</span>
+            <span class="podium-score text-yellow" id="scoreMensal1">0 vendas</span>
+            <div class="podium-step step-first">1º</div>
+          </div>
+
+          <div class="podium-slot slot-third" id="podioMensal3">
+            <div class="podium-avatar-wrap">
+              <div class="podium-medal-badge"><img src="icones/Bronze.svg" alt="Bronze" class="podium-svg-medal" /></div>
+              <div class="podium-avatar" id="avatarMensal3">--</div>
+            </div>
+            <span class="podium-name" id="nomeMensal3">--</span>
+            <span class="podium-score" id="scoreMensal3">0 vendas</span>
+            <div class="podium-step step-third">3º</div>
+          </div>
+        </div>
+
+        <div class="table-container mt-3">
           <table class="data-table ranking-table">
             <thead>
               <tr>
@@ -110,7 +256,7 @@
               </tr>
             </thead>
             <tbody id="corpoRankingMensal">
-              <tr><td colspan="5" class="loading">Carregando ranking do mês...</td></tr>
+              <tr><td colspan="5" class="loading">Carregando dados...</td></tr>
             </tbody>
           </table>
         </div>

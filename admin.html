@@ -1,295 +1,102 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel da Supervisora</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .badge-motivo-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--box-bg);
-            border: 1px solid var(--box-border);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.88rem;
-            color: var(--text-main);
-        }
-
-        .btn-estornar-hist {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.35);
-            color: #ef4444;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-estornar-hist:hover {
-            background: #ef4444;
-            color: #ffffff;
-            transform: scale(1.04);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestão de Consultores - Ranking Vendas</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
-<body>
-    <!-- Overlay Escuro da Sidebar -->
-    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+<body class="theme-dracula">
 
-    <!-- Barra Lateral (Drawer) -->
-    <aside id="sidebar-drawer" class="sidebar-drawer">
-        <div class="sidebar-header">
-            <h3>Menu de Gestão</h3>
-            <button id="btn-fechar-menu" class="btn-fechar-sidebar" title="Fechar">&times;</button>
-        </div>
+  <div id="navbar-container"></div>
 
-        <!-- Box de Cadastro de Consultor -->
-        <div class="box-cadastro-sidebar">
-            <h4 style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.05em; font-weight: 700;">NOVO CONSULTOR</h4>
-            
-            <input type="text" id="novo-nome" placeholder="Nome do consultor..." style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); margin-bottom: 10px; outline: none; background: var(--input-bg); color: var(--text-main); font-size: 0.9rem;">
-            
-            <label for="nova-foto" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Foto do consultor (Opcional):</label>
-            <input type="file" id="nova-foto" accept="image/*" style="padding: 6px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); margin-bottom: 14px; outline: none; background: var(--input-bg); color: var(--text-muted); cursor: pointer; font-size: 0.75rem;">
-            
-            <button id="btn-adicionar" style="padding: 10px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">Cadastrar na Equipe</button>
-        </div>
-
-        <!-- Links e Ações do Sistema -->
-        <nav class="sidebar-nav-links">
-            <button class="nav-box-btn" id="btn-menu-historico">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 1.1rem;">📊</span>
-                    <span>Consultar por Data</span>
-                </div>
-            </button>
-
-            <!-- Botão de Acesso ao Comparativo Geral -->
-            <a href="comparativo.html" class="nav-box-btn" style="text-decoration: none;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 1.1rem;">📈</span>
-                    <span>Comparativo da Equipe</span>
-                </div>
-            </a>
-
-            <!-- Botão de Acesso à Auditoria de Cancelamentos -->
-            <a href="cancelamentos.html" class="nav-box-btn" style="text-decoration: none;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 1.1rem;">🚫</span>
-                    <span>Vendas Canceladas</span>
-                </div>
-            </a>
-
-            <!-- Botão de Acesso ao Importador em Lote -->
-            <a href="importador.html" class="nav-box-btn" style="text-decoration: none;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 1.1rem;">📂</span>
-                    <span>Importar Planilhas (CSV)</span>
-                </div>
-            </a>
-
-            <button class="nav-box-btn" id="btn-menu-usuarios">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 1.1rem;">⚙️</span>
-                    <span>Gerenciar Usuários</span>
-                </div>
-            </button>
-
-            <!-- Seletor de Temas com Flyout Lateral -->
-            <div class="theme-menu-container">
-                <button class="nav-box-btn" id="btn-menu-temas">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="font-size: 1.1rem;">🎨</span>
-                        <span>Temas de Cores</span>
-                    </div>
-                    <span class="theme-arrow">›</span>
-                </button>
-                <div class="theme-dropdown" id="theme-dropdown">
-                    <button class="theme-option-btn" data-theme="default">🔵 Deep Blue (Padrão)</button>
-                    <button class="theme-option-btn" data-theme="dracula">🟣 Dracula Soft</button>
-                    <button class="theme-option-btn" data-theme="light">⚪ Claro (Light)</button>
-                    <button class="theme-option-btn" data-theme="refuturiza">🟠 Refuturiza</button>
-                </div>
-            </div>
-
-            <button class="nav-box-btn btn-sair" id="btn-zerar">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 1.1rem;">🔄</span>
-                    <span>Encerrar Ciclo (Zerar)</span>
-                </div>
-            </button>
-            <button class="nav-box-btn btn-sair" id="btn-menu-logout">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 1.1rem;">🚪</span>
-                    <span>Sair da Conta</span>
-                </div>
-            </button>
-        </nav>
-    </aside>
-
-    <!-- Grid do Dashboard Integrado -->
-    <div class="dashboard-grid">
-        <!-- Coluna 1: Painel Administrativo -->
-        <div class="ranking-container admin-container">
-            <div class="header-wrapper">
-                <div class="header-top">
-                    <h2>Painel de Controle</h2>
-                    <button id="btn-abrir-menu" class="btn-menu-lateral" title="Abrir Menu">☰</button>
-                </div>
-                <div class="header-bottom-labels">
-                    <span>REGISTRAR VENDAS</span>
-                    <span>AÇÕES</span>
-                </div>
-            </div>
-            
-            <ul id="lista-admin">
-                <!-- Preenchido dinamicamente -->
-            </ul>
-        </div>
-
-        <!-- Coluna 2: Ranking em Tempo Real -->
-        <div class="ranking-container ranking-display-container">
-            <div class="header-wrapper">
-                <div class="header-top">
-                    <h2>Ranking Geral</h2>
-                    <span class="live-badge"><span class="live-dot"></span> Tempo Real</span>
-                </div>
-                <div class="header-bottom-labels">
-                    <span>CONSULTOR</span>
-                    <span>TOTAL DE VENDAS</span>
-                </div>
-            </div>
-            
-            <ul id="lista-ranking">
-                <!-- Preenchido dinamicamente -->
-            </ul>
-        </div>
-    </div>
-
-    <!-- Modal 1: Lista de Gerenciamento de Usuários -->
-    <div id="modal-gerenciar" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Gerenciar Consultores</h3>
-                <button id="btn-fechar-modal" class="btn-fechar-sidebar" title="Fechar">&times;</button>
-            </div>
-            <ul id="lista-gerenciar" class="lista-gerenciamento">
-                <!-- Preenchido dinamicamente -->
-            </ul>
-        </div>
-    </div>
-
-    <!-- Modal 2: Formulário de Edição de Consultor -->
-    <div id="modal-editar" class="modal-overlay" style="z-index: 1002;">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header">
-                <h3>Editar Consultor</h3>
-                <button id="btn-fechar-editar" class="btn-fechar-sidebar" title="Fechar">&times;</button>
-            </div>
-            <form id="form-editar-consultor" style="display: flex; flex-direction: column; gap: 14px;">
-                <input type="hidden" id="edit-consultor-id">
-                
-                <div style="display: flex; justify-content: center; margin-bottom: 4px;">
-                    <img id="edit-preview-foto" src="" alt="Foto atual" class="foto-consultor" style="width: 64px; height: 64px; border: 2px solid var(--box-border);">
-                </div>
-
-                <div>
-                    <label for="edit-nome" style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Nome do Consultor:</label>
-                    <input type="text" id="edit-nome" required style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); outline: none; background: var(--input-bg); color: var(--text-main); font-size: 0.9rem;">
-                </div>
-
-                <div>
-                    <label for="edit-foto" style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 6px;">Trocar Foto (Opcional):</label>
-                    <input type="file" id="edit-foto" accept="image/*" style="padding: 6px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); outline: none; background: var(--input-bg); color: var(--text-muted); cursor: pointer; font-size: 0.75rem;">
-                </div>
-
-                <button type="submit" id="btn-salvar-edicao" style="padding: 10px; width: 100%; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; margin-top: 6px;">Salvar Alterações</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal 3: Consultar Histórico por Data -->
-    <div id="modal-historico" class="modal-overlay">
-        <div class="modal-content" style="max-width: 520px;">
-            <div class="modal-header">
-                <h3>Histórico de Fechamentos</h3>
-                <button id="btn-fechar-historico" class="btn-fechar-sidebar" title="Fechar">&times;</button>
-            </div>
-            
-            <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-                <input type="date" id="filtro-data-historico" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--box-border); background: var(--input-bg); color: var(--text-main); font-size: 0.9rem; outline: none;">
-                <button id="btn-exportar-csv" class="btn-acao-modal btn-acao-editar" style="padding: 0 14px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;" title="Exportar para Excel">
-                    📥 CSV
-                </button>
-            </div>
-
-            <div id="historico-container-resultado" style="max-height: 55vh; overflow-y: auto;">
-                <ul id="lista-historico-ranking" class="lista-gerenciamento">
-                    <!-- Preenchido dinamicamente -->
-                </ul>
-                <div id="historico-vazio" style="display: none; text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 20px;">
-                    Nenhum ciclo registrado para esta data.
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal 4: Confirmação Customizada -->
-    <div id="modal-confirmacao" class="modal-overlay" style="z-index: 1005;">
-        <div class="modal-content" style="max-width: 380px; text-align: center;">
-            <div style="font-size: 2.2rem; margin-bottom: 8px;" id="modal-conf-icone">⚠️</div>
-            <h3 id="modal-conf-titulo" style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 8px;">Confirmação</h3>
-            <p id="modal-conf-mensagem" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.4;">Tem certeza?</p>
-            
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button id="btn-conf-cancelar" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--box-border); background: var(--box-bg); color: var(--text-main); cursor: pointer; font-weight: 600; font-size: 0.88rem;">Cancelar</button>
-                <button id="btn-conf-confirmar" style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: #ef4444; color: white; cursor: pointer; font-weight: bold; font-size: 0.88rem;">Confirmar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal 5: Cancelar / Estornar Venda Retroativa de Ciclo Fechado -->
-    <div id="modal-estorno" class="modal-overlay" style="z-index: 1003;">
-        <div class="modal-content" style="max-width: 420px;">
-            <div class="modal-header">
-                <h3>Estornar Venda de Ciclo Fechado</h3>
-                <button id="btn-fechar-estorno" class="btn-fechar-sidebar" title="Fechar">&times;</button>
-            </div>
-            <form id="form-estorno" style="display: flex; flex-direction: column; gap: 12px;">
-                <input type="hidden" id="estorno-data-ciclo">
-                <input type="hidden" id="estorno-consultor-id">
-
-                <div style="background: var(--box-bg); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--box-border);">
-                    <div style="font-size: 0.78rem; color: var(--text-muted);">Consultor: <strong id="estorno-nome-consultor" style="color: var(--text-main);"></strong></div>
-                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Data do Ciclo: <strong id="estorno-data-formatada" style="color: var(--text-main);"></strong></div>
-                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Vendas Registradas: <strong id="estorno-vendas-atuais" style="color: #3b82f6;"></strong></div>
-                </div>
-
-                <div>
-                    <label for="select-motivo-cancelamento" style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 700;">MOTIVO DO CANCELAMENTO:</label>
-                    <select id="select-motivo-cancelamento" required style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); outline: none; background: var(--input-bg); color: var(--text-main); font-size: 0.88rem;">
-                        <!-- Preenchido dinamicamente -->
-                    </select>
-                </div>
-
-                <div>
-                    <label for="estorno-qtd" style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 700;">QUANTIDADE A CANCELAR:</label>
-                    <input type="number" id="estorno-qtd" min="1" value="1" required style="padding: 10px; width: 100%; border-radius: 6px; border: 1px solid var(--box-border); outline: none; background: var(--input-bg); color: var(--text-main); font-size: 0.9rem;">
-                </div>
-
-                <div style="display: flex; gap: 10px; margin-top: 6px;">
-                    <button type="button" id="btn-cancelar-estorno" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--box-border); background: var(--box-bg); color: var(--text-main); cursor: pointer; font-weight: 600; font-size: 0.88rem;">Voltar</button>
-                    <button type="submit" style="flex: 1; padding: 10px; border-radius: 6px; border: none; background: #ef4444; color: white; cursor: pointer; font-weight: bold; font-size: 0.88rem;">Confirmar Cancelamento</button>
-                </div>
-            </form>
-        </div>
-    </div>
+  <main class="dashboard-container">
     
-    <script type="module" src="admin.js"></script>
+    <div class="card">
+      <div class="card-header flex-wrap">
+        <div class="header-title">
+          <i class="fa-solid fa-users-gear text-purple"></i>
+          <div>
+            <h2>Gestão de Consultores e Fotos</h2>
+            <p class="subtitle-text">Cadastre novos vendedores, altere fotos de perfil e ative/inative consultores na plataforma.</p>
+          </div>
+        </div>
+
+        <div class="filters-bar">
+          <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="buscaConsultoresInput" placeholder="Buscar consultor..." class="compact-search-input" />
+          </div>
+          <button class="btn btn-primary" id="btnNovoConsultor">
+            <i class="fa-solid fa-user-plus"></i> Novo Consultor
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid de Cards de Gestão dos Consultores -->
+      <div id="gridConsultoresAdmin" class="admin-consultants-grid mt-4">
+        <div class="loading">Carregando consultores...</div>
+      </div>
+    </div>
+
+    <!-- Modal de Cadastro / Edição de Consultor -->
+    <div class="modal-overlay" id="modalConsultorAdmin">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modalConsultorTitulo"><i class="fa-solid fa-user-pen"></i> Editar Consultor</h3>
+          <button class="btn-close" id="btnFecharModalConsultor">&times;</button>
+        </div>
+        <form id="formConsultorAdmin">
+          <input type="hidden" id="consultorIdAdmin" />
+
+          <div class="avatar-upload-preview">
+            <div class="avatar-circle-big" id="avatarPreviewBig">
+              <span id="txtIniciaisPreview">--</span>
+              <img id="imgAvatarPreview" src="" alt="" style="display: none;" />
+            </div>
+            <div class="avatar-upload-actions">
+              <label for="inputFotoArquivo" class="btn btn-secondary-sm">
+                <i class="fa-solid fa-camera"></i> Carregar Foto
+              </label>
+              <input type="file" id="inputFotoArquivo" accept="image/*" style="display: none;" />
+              <button type="button" class="btn btn-secondary-sm text-danger" id="btnRemoverFoto" style="display: none;">Remover</button>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label for="inputNomeConsultorAdmin">Nome Completo *</label>
+            <input type="text" id="inputNomeConsultorAdmin" required placeholder="Ex: ALEXANDRA GUERREIRO" />
+          </div>
+
+          <div class="form-group">
+            <label for="inputFotoUrlAdmin">URL da Imagem (Opcional)</label>
+            <input type="url" id="inputFotoUrlAdmin" placeholder="https://exemplo.com/foto.jpg" />
+          </div>
+
+          <div class="form-group">
+            <label for="selectStatusConsultorAdmin">Status na Operação</label>
+            <select id="selectStatusConsultorAdmin">
+              <option value="ativo">Ativo (Exibido nos rankings)</option>
+              <option value="inativo">Inativo (Oculto)</option>
+            </select>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary-sm" id="btnCancelarModalConsultor">Cancelar</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="navbar.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>

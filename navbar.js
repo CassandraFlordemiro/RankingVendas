@@ -1,5 +1,5 @@
 /**
- * Componente Mestre de Navegação e Regras Globais
+ * Componente Mestre de Navegação, Temas Globais e Modal de Vendas
  */
 
 window.formatarNomeCurto = function(nome) {
@@ -28,7 +28,19 @@ window.formatarNomeCurto = function(nome) {
   return `${partes[0]} ${partes[1]}`;
 };
 
+window.aplicarTema = function(tema) {
+  document.body.className = `theme-${tema}`;
+  localStorage.setItem('ranking_theme_selected', tema);
+  const select = document.getElementById('seletorTemaGlobal');
+  if (select && select.value !== tema) {
+    select.value = tema;
+  }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+  const temaSalvo = localStorage.getItem('ranking_theme_selected') || 'dracula';
+  window.aplicarTema(temaSalvo);
+
   renderizarNavbarGlobal();
   configurarModalGlobal();
 });
@@ -38,6 +50,7 @@ function renderizarNavbarGlobal() {
   if (!container) return;
 
   const caminhoAtual = window.location.pathname.split('/').pop() || 'index.html';
+  const temaAtual = localStorage.getItem('ranking_theme_selected') || 'dracula';
 
   const rotas = [
     { href: 'index.html', label: 'Rankings', icon: 'fa-trophy' },
@@ -45,7 +58,8 @@ function renderizarNavbarGlobal() {
     { href: 'desempenho.html', label: 'Desempenho', icon: 'fa-chart-pie' },
     { href: 'comparativo.html', label: 'Comparativo', icon: 'fa-users-viewfinder' },
     { href: 'cancelamentos.html', label: 'Vendas Canceladas', icon: 'fa-ban' },
-    { href: 'importador.html', label: 'Importador', icon: 'fa-cloud-arrow-up' }
+    { href: 'importador.html', label: 'Importador', icon: 'fa-cloud-arrow-up' },
+    { href: 'admin.html', label: 'Consultores', icon: 'fa-user-gear' }
   ];
 
   const linksHtml = rotas.map(r => {
@@ -59,14 +73,36 @@ function renderizarNavbarGlobal() {
         <i class="fa-solid fa-chart-line header-icon"></i>
         <h1>Ranking<span>Vendas</span></h1>
       </div>
+      
       <nav class="header-nav">
-        ${linksHtml}
-        <button class="btn btn-primary" id="btnAbrirModalVendaGlobal">
-          <i class="fa-solid fa-plus"></i> Nova Venda (Raphaela)
-        </button>
+        <div class="nav-links-group">
+          ${linksHtml}
+        </div>
+
+        <div class="header-actions-group">
+          <!-- Seletor de Temas -->
+          <div class="theme-selector-wrap">
+            <i class="fa-solid fa-palette text-muted"></i>
+            <select id="seletorTemaGlobal" onchange="aplicarTema(this.value)">
+              <option value="dracula" ${temaAtual === 'dracula' ? 'selected' : ''}>Dracula Dark</option>
+              <option value="midnight" ${temaAtual === 'midnight' ? 'selected' : ''}>Midnight Blue</option>
+              <option value="cyberpunk" ${temaAtual === 'cyberpunk' ? 'selected' : ''}>Cyberpunk Neon</option>
+              <option value="light" ${temaAtual === 'light' ? 'selected' : ''}>Light Clean</option>
+            </select>
+          </div>
+
+          <button class="btn btn-primary" id="btnAbrirModalVendaGlobal">
+            <i class="fa-solid fa-plus"></i> Nova Venda
+          </button>
+
+          <a href="login.html" class="btn btn-secondary-sm btn-logout" title="Sair / Trocar Usuário">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </a>
+        </div>
       </nav>
     </header>
 
+    <!-- Modal Global de Lançamento de Venda -->
     <div class="modal-overlay" id="modalVendaOverlayGlobal">
       <div class="modal-card">
         <div class="modal-header">
@@ -134,7 +170,7 @@ function renderizarNavbarGlobal() {
           </div>
 
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" id="btnCancelarModalGlobal">Cancelar</button>
+            <button type="button" class="btn btn-secondary-sm" id="btnCancelarModalGlobal">Cancelar</button>
             <button type="submit" class="btn btn-primary" id="btnSalvarVendaGlobal">
               <i class="fa-solid fa-check"></i> Salvar e Enviar p/ Pós-Venda
             </button>
