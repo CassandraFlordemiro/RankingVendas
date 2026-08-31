@@ -1,339 +1,175 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auditoria de Cancelamentos</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .auditoria-container {
-            width: 100%;
-            max-width: 1200px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            box-sizing: border-box;
-        }
-
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            padding: 14px 20px;
-            border-radius: 12px;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .nav-links-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .btn-nav-action {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 12px;
-            background: var(--box-bg);
-            border: 1px solid var(--box-border);
-            border-radius: 8px;
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s ease, border-color 0.2s ease;
-        }
-
-        .btn-nav-action:hover {
-            transform: scale(1.03);
-            border-color: var(--box-border-hover);
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .input-filtro-data {
-            padding: 7px 10px;
-            border-radius: 8px;
-            border: 1px solid var(--box-border);
-            background: var(--input-bg);
-            color: var(--text-main);
-            font-size: 0.85rem;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .btn-limpar-filtro {
-            padding: 7px 12px;
-            background: var(--box-bg);
-            border: 1px solid var(--box-border);
-            border-radius: 8px;
-            color: var(--text-main);
-            font-size: 0.82rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-limpar-filtro:hover {
-            border-color: var(--box-border-hover);
-        }
-
-        /* KPIs */
-        .kpi-grid-executivo {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-        }
-
-        @media (max-width: 860px) {
-            .kpi-grid-executivo { grid-template-columns: repeat(2, 1fr); }
-        }
-
-        .kpi-box {
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 12px;
-            padding: 14px 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            transition: transform 0.2s ease;
-        }
-
-        .kpi-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .kpi-num {
-            font-size: 1.45rem;
-            font-weight: 800;
-            color: var(--text-main);
-        }
-
-        .kpi-destaque-red {
-            background: #dc2626 !important;
-            border: 1px solid #ef4444 !important;
-            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);
-        }
-
-        .kpi-destaque-red .kpi-label, .kpi-destaque-red .kpi-num {
-            color: #ffffff !important;
-        }
-
-        /* Gráficos e Tabelas */
-        .charts-row-dual {
-            display: grid;
-            grid-template-columns: 1fr 340px;
-            gap: 16px;
-        }
-
-        @media (max-width: 900px) {
-            .charts-row-dual { grid-template-columns: 1fr; }
-        }
-
-        .chart-box-executivo {
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 14px;
-            padding: 18px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            min-height: 290px;
-        }
-
-        .chart-header-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-
-        .chart-header-actions h3 {
-            font-size: 0.95rem;
-            color: var(--text-main);
-            margin: 0;
-        }
-
-        .table-card {
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 14px;
-            padding: 22px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            overflow-x: auto;
-        }
-
-        .tabela-comparativa {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.95rem;
-            min-width: 720px;
-        }
-
-        .tabela-comparativa th {
-            padding: 12px 14px;
-            color: var(--text-main);
-            font-size: 0.78rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            border-bottom: 2px solid var(--box-border);
-            background: var(--box-bg);
-        }
-
-        .tabela-comparativa td {
-            padding: 14px;
-            border-bottom: 1px solid var(--box-border);
-            color: var(--text-main);
-            vertical-align: middle;
-        }
-
-        .tabela-comparativa tr:hover td {
-            background: var(--box-bg);
-        }
-
-        .badge-motivo-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--box-bg);
-            border: 1px solid var(--box-border);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.88rem;
-            color: var(--text-main);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendas Canceladas - Ranking Vendas</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <div class="auditoria-container">
-        
-        <header class="header-bar">
-            <div class="nav-links-group">
-                <a href="admin.html" class="btn-nav-action">
-                    <span>⚙️</span>
-                    <span>Painel Admin</span>
-                </a>
-                <a href="comparativo.html" class="btn-nav-action">
-                    <span>👥</span>
-                    <span>Comparativo da Equipe</span>
-                </a>
-            </div>
+<body class="theme-dracula">
 
-            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Auditoria de Cancelamentos</h2>
+  <div id="navbar-container"></div>
 
-            <div class="header-actions">
-                <input type="date" id="filtro-data-auditoria" class="input-filtro-data" title="Filtrar por data do ciclo">
-                <button id="btn-ver-todos" class="btn-limpar-filtro">Ver Todos</button>
-                <button id="btn-gerenciar-motivos" class="btn-acao-modal btn-acao-editar" style="padding: 8px 12px; background: #ef4444; color: white;">
-                    📋 Justificativas
-                </button>
-            </div>
-        </header>
-
-        <section class="kpi-grid-executivo">
-            <div class="kpi-box kpi-destaque-red">
-                <span class="kpi-label">Volume Total Cancelado</span>
-                <span class="kpi-num" id="kpi-total-cancelado">0</span>
-            </div>
-            <div class="kpi-box">
-                <span class="kpi-label">Total de Ocorrências</span>
-                <span class="kpi-num" id="kpi-total-eventos">0</span>
-            </div>
-            <div class="kpi-box">
-                <span class="kpi-label">Principal Motivo</span>
-                <span class="kpi-num" id="kpi-motivo-principal" style="font-size: 0.95rem;">-</span>
-            </div>
-            <div class="kpi-box">
-                <span class="kpi-label">Consultor Mais Afetado</span>
-                <span class="kpi-num" id="kpi-consultor-afetado" style="font-size: 1.05rem;">-</span>
-            </div>
-        </section>
-
-        <section class="charts-row-dual">
-            <div class="chart-box-executivo">
-                <div class="chart-header-actions">
-                    <h3>Cancelamentos por Consultor</h3>
-                    <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Volume Perdido</span>
-                </div>
-                <div style="position: relative; flex: 1; width: 100%; min-height: 230px;">
-                    <canvas id="graficoConsultores"></canvas>
-                </div>
-            </div>
-
-            <div class="chart-box-executivo">
-                <div class="chart-header-actions">
-                    <h3>Distribuição por Motivos</h3>
-                    <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">Geral</span>
-                </div>
-                <div style="position: relative; flex: 1; width: 100%; min-height: 230px;">
-                    <canvas id="graficoMotivos"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <section class="table-card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main);">Log de Auditoria de Estornos</h3>
-                <button id="btn-exportar-auditoria" class="btn-acao-modal btn-acao-editar" style="padding: 6px 12px;">📥 Exportar CSV</button>
-            </div>
-            <table class="tabela-comparativa">
-                <thead>
-                    <tr>
-                        <th>Data do Estorno</th>
-                        <th>Data do Ciclo Afetado</th>
-                        <th>Consultor</th>
-                        <th style="text-align: center;">Qtd</th>
-                        <th>Justificativa (Motivo)</th>
-                        <th>Autor (Admin)</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody-auditoria">
-                    <!-- Preenchido dinamicamente -->
-                </tbody>
-            </table>
-        </section>
-
-    </div>
-
-    <!-- Modal Gerenciar Motivos -->
-    <div id="modal-motivos" class="modal-overlay" style="z-index: 1002;">
-        <div class="modal-content" style="max-width: 460px;">
-            <div class="modal-header">
-                <h3>Gerenciar Justificativas de Cancelamento</h3>
-                <button id="btn-fechar-motivos" class="btn-fechar-sidebar" title="Fechar">&times;</button>
-            </div>
-
-            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-                <input type="text" id="novo-motivo-input" placeholder="Novo motivo..." style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--box-border); outline: none; background: var(--input-bg); color: var(--text-main); font-size: 0.88rem;">
-                <button id="btn-adicionar-motivo" style="padding: 0 14px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">+ Adicionar</button>
-            </div>
-
-            <div style="max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;" id="lista-motivos-container">
-                <!-- Preenchido dinamicamente -->
-            </div>
+  <main class="dashboard-container">
+    
+    <!-- Painel Superior: Cabeçalho e Filtros -->
+    <section class="card">
+      <div class="card-header flex-wrap">
+        <div class="header-title">
+          <i class="fa-solid fa-ban text-danger"></i>
+          <div>
+            <h2>Gestão de Vendas Canceladas e Recusas</h2>
+            <p class="subtitle-text">Audite perdas operacionais, analise gargalos de conversão e reabra contratos para renegociação.</p>
+          </div>
         </div>
+
+        <div class="filters-bar">
+          <div class="control-group-inline">
+            <label for="filtroMesCancelamentos"><i class="fa-solid fa-calendar-days text-purple"></i> Período:</label>
+            <select id="filtroMesCancelamentos" style="width: 170px;">
+              <option value="TODOS">Todo o Período</option>
+              <option value="0">Janeiro</option>
+              <option value="1">Fevereiro</option>
+              <option value="2">Março</option>
+              <option value="3">Abril</option>
+              <option value="4">Maio</option>
+              <option value="5">Junho</option>
+              <option value="6">Julho</option>
+              <option value="7">Agosto</option>
+              <option value="8">Setembro</option>
+              <option value="9">Outubro</option>
+              <option value="10">Novembro</option>
+              <option value="11">Dezembro</option>
+            </select>
+          </div>
+
+          <div class="control-group-inline">
+            <label for="filtroConsultorCancelamentos"><i class="fa-solid fa-user text-purple"></i> Consultor:</label>
+            <select id="filtroConsultorCancelamentos" style="width: 200px;">
+              <option value="TODOS">Todos os Consultores</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Cards de Impacto Financeiro e Operacional -->
+      <div class="top-stats-row mt-3">
+        <div class="stat-box stat-highlight-red">
+          <span class="stat-label">Total Canceladas</span>
+          <h3 id="cardTotalCanceladas">0</h3>
+          <small class="stat-sub">contratos abortados</small>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-label">Receita Não Realizada</span>
+          <h3 id="cardReceitaPerdida" class="text-danger">R$ 0,00</h3>
+          <small class="stat-sub">faturamento perdido</small>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-label">Taxa de Cancelamento</span>
+          <h3 id="cardTaxaCancelamento">0%</h3>
+          <small class="stat-sub">do volume lançado</small>
+        </div>
+
+        <div class="stat-box stat-highlight-purple">
+          <span class="stat-label">Modalidade Mais Afetada</span>
+          <h3 id="cardModalidadeCritica">--</h3>
+          <small class="stat-sub" id="cardModalidadeCriticaQtd">0 ocorrências</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gráficos de Auditoria de Cancelamento -->
+    <div class="grid-two-charts mt-3">
+      
+      <!-- Gráfico 1: Vendas Canceladas por Consultor -->
+      <div class="card chart-panel">
+        <div class="chart-panel-header">
+          <h4><i class="fa-solid fa-user-xmark text-danger"></i> Cancelamentos por Consultor</h4>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="graficoCanceladosConsultor"></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico 2: Formas de Pagamento dos Cancelados -->
+      <div class="card chart-panel">
+        <div class="chart-panel-header">
+          <h4><i class="fa-solid fa-wallet text-yellow"></i> Meios de Pagamento Recusados</h4>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="graficoCanceladosPagamento"></canvas>
+        </div>
+      </div>
+
     </div>
 
-    <script type="module" src="cancelamentos.js"></script>
+    <!-- Tabela de Histórico de Cancelamentos (10 Registros Iniciais) -->
+    <section class="card mt-4">
+      <div class="card-header flex-wrap">
+        <div class="header-title">
+          <i class="fa-solid fa-clock-rotate-left text-yellow"></i>
+          <div>
+            <h2>Contratos Não Concluídos no Pós-Venda</h2>
+            <span class="subtitle-text" id="txtContagemCancelados">Exibindo 0 de 0 contratos</span>
+          </div>
+        </div>
+
+        <div class="filters-bar">
+          <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="buscaCancelamentosInput" placeholder="Buscar por cliente, matrícula ou consultor..." class="compact-search-input" />
+          </div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Matrícula</th>
+              <th>Cliente</th>
+              <th>Data</th>
+              <th>Consultor</th>
+              <th>Tipo</th>
+              <th>Pagamento</th>
+              <th>Observação do Pós</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpoCancelamentos">
+            <tr><td colspan="9" class="loading">Carregando dados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginação de 10 em 10 -->
+      <div class="pagination-footer mt-4">
+        <button class="btn btn-secondary-sm" id="btnRecolher10" style="display: none;">
+          <i class="fa-solid fa-compress"></i> Recolher p/ 10
+        </button>
+        <div class="pagination-actions">
+          <button class="btn btn-primary btn-sm" id="btnMostrarMais10">
+            <i class="fa-solid fa-plus"></i> Mostrar Mais 10
+          </button>
+          <button class="btn btn-secondary-sm" id="btnMostrarTodos">
+            <i class="fa-solid fa-angles-down"></i> Mostrar Todos (<span id="txtQtdTotalBtn">0</span>)
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="navbar.js"></script>
+  <script src="cancelamentos.js"></script>
 </body>
 </html>

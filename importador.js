@@ -1,627 +1,431 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-    getFirestore, collection, getDocs, doc, setDoc, writeBatch 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+const db = firebase.firestore();
+let dadosBrutosProcessados = [];
+let mapaConsultores = {};
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDgtHlqlv4meTjW4VyJ8HrVCfUqMHaoUp0",
-  authDomain: "rankingvendas-d56da.firebaseapp.com",
-  projectId: "rankingvendas-d56da",
-  storageBucket: "rankingvendas-d56da.firebasestorage.app",
-  messagingSenderId: "55208086303",
-  appId: "1:55208086303:web:fd78e3481750c04acf3e2a"
+const DICIONARIO_NOMES = {
+  'ALEXANDRA GUERREIRO DA SILVA SPLITTER': 'ALEXANDRA GUERREIRO',
+  'ALEXANDRA GUERREIRO': 'ALEXANDRA GUERREIRO',
+  'SIMONE KNUPP ORTEGA': 'SIMONE KNUPP',
+  'SIMONE KNUPP': 'SIMONE KNUPP',
+  'CLAUDIO LUIZ DA SILVA': 'CLAUDIO LUIZ',
+  'CLAUDIO LUIZ': 'CLAUDIO LUIZ',
+  'ADRIELLE CRISTINA SANTANA PENA': 'ADRIELLE CRISTINA',
+  'ADRIELLE CRISTINA': 'ADRIELLE CRISTINA',
+  'KARINE MARCELA DINIZ PIMENTA SALDANHA': 'KARINE MARCELA',
+  'KARINE MARCELA': 'KARINE MARCELA',
+  'NATALIA CRISTINA DA SILVA SANTOS': 'NATALIA CRISTINA',
+  'NATALIA CRISTINA': 'NATALIA CRISTINA',
+  'PRISCILA LIMA DE OLIVEIRA': 'PRISCILA LIMA',
+  'PRISCILA LIMA': 'PRISCILA LIMA',
+  'MAYARA NUNES DE CARVALHO': 'MAYARA NUNES',
+  'MAYARA NUNES': 'MAYARA NUNES',
+  'THATIANE CHRISTINE DA SILVA LIMA': 'THATIANE CHRISTINE',
+  'THATIANE CHRISTINE': 'THATIANE CHRISTINE'
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-onAuthStateChanged(auth, (user) => {
-    if (!user) window.location.href = "login.html";
+document.addEventListener('DOMContentLoaded', () => {
+  atualizarContadorBanco();
+  configurarDropzone();
+  
+  document.getElementById('btnProcessarArquivo').addEventListener('click', processarOrigemDados);
+  document.getElementById('btnSalvarNoBanco').addEventListener('click', salvarDadosNoFirestore);
+  document.getElementById('btnZerarBanco').addEventListener('click', confirmarZerarBanco);
+  document.getElementById('btnMarcarTodos').addEventListener('click', () => toggleTodosConsultores(true));
+  document.getElementById('btnDesmarcarTodos').addEventListener('click', () => toggleTodosConsultores(false));
+  document.getElementById('buscaConsultorImport').addEventListener('input', filtrarChipsConsultores);
 });
 
-const temaSalvo = localStorage.getItem('ranking_tema_preferido') || 'default';
-if (temaSalvo === 'dracula') document.body.classList.add('theme-dracula');
-else if (temaSalvo === 'light') document.body.classList.add('theme-light');
-else if (temaSalvo === 'refuturiza') document.body.classList.add('theme-refuturiza');
+function configurarDropzone() {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('arquivoInput');
+  const chipNome = document.getElementById('nomeArquivoSelecionado');
+  const txtNome = document.getElementById('txtNomeArquivo');
+  const btnRemover = document.getElementById('btnRemoverArquivo');
 
-// Elementos DOM
-const inputSheetsUrl = document.getElementById('input-sheets-url');
-const btnCarregarUrl = document.getElementById('btn-carregar-url');
-const inputCsv = document.getElementById('input-csv');
-const btnEscolherArquivo = document.getElementById('btn-escolher-arquivo');
-const dropArea = document.getElementById('drop-area');
-
-const cardFiltroConsultores = document.getElementById('card-filtro-consultores');
-const gridChipsConsultores = document.getElementById('grid-chips-consultores');
-const inputBuscaConsultor = document.getElementById('input-busca-consultor');
-const btnMarcarTodos = document.getElementById('btn-marcar-todos');
-const btnDesmarcarTodos = document.getElementById('btn-desmarcar-todos');
-
-const summaryContainer = document.getElementById('summary-container');
-const previewCard = document.getElementById('preview-card');
-const tbodyPreview = document.getElementById('tbody-preview');
-const btnInjetar = document.getElementById('btn-injetar-banco');
-const progressContainer = document.getElementById('progress-container');
-const progressFill = document.getElementById('progress-fill');
-const checkResetTotal = document.getElementById('check-reset-total');
-
-// Controles de Paginação
-const btnVerMais = document.getElementById('btn-ver-mais');
-const btnVerTudo = document.getElementById('btn-ver-tudo');
-const btnRecolher = document.getElementById('btn-recolher');
-const statusExibicaoLinhas = document.getElementById('status-exibicao-linhas');
-const contadorLinhasFooter = document.getElementById('contador-linhas-footer');
-
-// Modal Customizado
-const modalConfirmacao = document.getElementById('modal-confirmacao');
-const modalConfTitulo = document.getElementById('modal-conf-titulo');
-const modalConfMensagem = document.getElementById('modal-conf-mensagem');
-const modalConfIcone = document.getElementById('modal-conf-icone');
-const btnConfCancelar = document.getElementById('btn-conf-cancelar');
-const btnConfConfirmar = document.getElementById('btn-conf-confirmar');
-let callbackConfirmacao = null;
-
-function exibirModalCustomizado({ titulo, mensagem, icone = "⚠️", textoBotao = "Confirmar", corBotao = "#ef4444", apenasAviso = false, onConfirmar = null }) {
-    modalConfTitulo.textContent = titulo;
-    modalConfMensagem.textContent = mensagem;
-    modalConfIcone.textContent = icone;
-    btnConfConfirmar.textContent = textoBotao;
-    btnConfConfirmar.style.backgroundColor = corBotao;
-    
-    if (apenasAviso) {
-        btnConfCancelar.style.display = 'none';
-        callbackConfirmacao = onConfirmar;
-    } else {
-        btnConfCancelar.style.display = 'block';
-        callbackConfirmacao = onConfirmar;
+  dropZone.onclick = (e) => {
+    if (e.target !== btnRemover && !btnRemover.contains(e.target)) {
+      fileInput.click();
     }
-    
-    modalConfirmacao.classList.add('active');
+  };
+
+  fileInput.onchange = () => {
+    if (fileInput.files.length > 0) {
+      txtNome.textContent = fileInput.files[0].name;
+      chipNome.style.display = 'inline-flex';
+    }
+  };
+
+  btnRemover.onclick = (e) => {
+    e.stopPropagation();
+    fileInput.value = '';
+    chipNome.style.display = 'none';
+  };
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+    }, false);
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length > 0) {
+      fileInput.files = files;
+      txtNome.textContent = files[0].name;
+      chipNome.style.display = 'inline-flex';
+    }
+  });
 }
 
-function fecharModalCustomizado() {
-    modalConfirmacao.classList.remove('active');
-    callbackConfirmacao = null;
+async function atualizarContadorBanco() {
+  try {
+    const snap = await db.collection('vendas').get();
+    document.getElementById('badgeTotalBanco').textContent = `${snap.size} vendas registradas`;
+  } catch (err) {
+    document.getElementById('badgeTotalBanco').textContent = 'Erro ao consultar banco';
+  }
 }
 
-btnConfCancelar.addEventListener('click', fecharModalCustomizado);
-btnConfConfirmar.addEventListener('click', () => {
-    if (callbackConfirmacao) callbackConfirmacao();
-    fecharModalCustomizado();
-});
+function processarOrigemDados() {
+  const fileInput = document.getElementById('arquivoInput');
+  let linkInput = document.getElementById('linkGoogleSheets').value.trim();
 
-modalConfirmacao.addEventListener('click', (e) => {
-    if (e.target === modalConfirmacao) fecharModalCustomizado();
-});
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    const extensao = file.name.split('.').pop().toLowerCase();
 
-let todasVendasBrutas = [];
-let mapaContagemConsultores = new Map();
-let consultoresSelecionados = new Set();
-let limiteExibicao = 60;
-
-function encurtarNome(nomeCompleto) {
-    if (!nomeCompleto) return "Não Identificado";
-    
-    let limpo = nomeCompleto.trim();
-    const preposicoes = ["de", "da", "do", "dos", "das", "e"];
-    const partes = limpo.split(/\s+/).filter(p => p.length > 0);
-
-    if (partes.length === 1) return formatarPalavra(partes[0]);
-
-    const primeiroNome = formatarPalavra(partes[0]);
-    let segundoNome = "";
-    for (let i = 1; i < partes.length; i++) {
-        const palavra = partes[i].toLowerCase();
-        if (!preposicoes.includes(palavra)) {
-            segundoNome = formatarPalavra(partes[i]);
-            break;
-        }
+    if (extensao === 'csv') {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => normalizarPlanilha(results.data)
+      });
+    } else if (extensao === 'xlsx' || extensao === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+        normalizarPlanilha(json);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  } else if (linkInput) {
+    if (linkInput.includes('/edit')) {
+      linkInput = linkInput.split('/edit')[0] + '/export?format=csv';
     }
 
-    return segundoNome ? `${primeiroNome} ${segundoNome}` : primeiroNome;
-}
-
-function formatarPalavra(str) {
-    if (!str) return "";
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-}
-
-function padronizarData(strData) {
-    if (!strData) return "";
-    strData = strData.trim();
-    if (strData.includes('/')) {
-        const partes = strData.split('/');
-        if (partes.length === 3) {
-            const dia = partes[0].padStart(2, '0');
-            const mes = partes[1].padStart(2, '0');
-            const ano = partes[2].length === 2 ? `20${partes[2]}` : partes[2];
-            return `${ano}-${mes}-${dia}`;
-        }
-    }
-    return strData;
-}
-
-// Leitura via Arquivo Local
-btnEscolherArquivo.addEventListener('click', () => inputCsv.click());
-inputCsv.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) lerArquivoCsv(e.target.files[0]);
-});
-
-dropArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropArea.style.borderColor = '#3b82f6';
-});
-
-dropArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropArea.style.borderColor = 'var(--box-border)';
-    if (e.dataTransfer.files.length > 0) lerArquivoCsv(e.dataTransfer.files[0]);
-});
-
-function lerArquivoCsv(arquivo) {
-    const reader = new FileReader();
-    reader.onload = (e) => processarCsvTexto(e.target.result);
-    reader.readAsText(arquivo, 'UTF-8');
-}
-
-// Leitura via Link
-btnCarregarUrl.addEventListener('click', async () => {
-    const url = inputSheetsUrl.value.trim();
-    if (!url) {
-        return exibirModalCustomizado({
-            titulo: "Link Necessário",
-            mensagem: "Por favor, cole o link da planilha do Google Sheets no campo correspondente.",
-            icone: "🔗",
-            textoBotao: "Entendido",
-            corBotao: "#3b82f6",
-            apenasAviso: true
-        });
-    }
-
-    const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-    if (!match || !match[1]) {
-        return exibirModalCustomizado({
-            titulo: "Link Inválido",
-            mensagem: "O link fornecido não corresponde a uma planilha do Google Sheets válida.",
-            icone: "⚠️",
-            textoBotao: "Corrigir",
-            corBotao: "#ef4444",
-            apenasAviso: true
-        });
-    }
-
-    const sheetId = match[1];
-    const gidMatch = url.match(/gid=([0-9]+)/);
-    const gid = gidMatch ? gidMatch[1] : "0";
-
-    const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-
-    btnCarregarUrl.disabled = true;
-    btnCarregarUrl.textContent = "Baixando dados...";
-
-    try {
-        const response = await fetch(exportUrl);
-        if (!response.ok) throw new Error("Não foi possível acessar a planilha. Verifique se o compartilhamento está como 'Qualquer pessoa com o link'.");
-        const textoCsv = await response.text();
-        processarCsvTexto(textoCsv);
-    } catch (err) {
-        exibirModalCustomizado({
-            titulo: "Erro de Acesso",
-            mensagem: err.message || "Não foi possível carregar os dados pelo link. Baixe em CSV e selecione o arquivo.",
-            icone: "⚠️",
-            textoBotao: "Ok",
-            corBotao: "#ef4444",
-            apenasAviso: true
-        });
-    } finally {
-        btnCarregarUrl.disabled = false;
-        btnCarregarUrl.textContent = "📥 Puxar Dados do Link";
-    }
-});
-
-function processarCsvTexto(conteudo) {
-    const linhas = conteudo.split(/\r\n|\n/).filter(l => l.trim() !== "");
-    if (linhas.length < 2) {
-        return exibirModalCustomizado({
-            titulo: "Planilha Vazia",
-            mensagem: "O arquivo CSV não possui dados suficientes para importação.",
-            icone: "📄",
-            textoBotao: "Ok",
-            corBotao: "#ef4444",
-            apenasAviso: true
-        });
-    }
-
-    todasVendasBrutas = [];
-    mapaContagemConsultores = new Map();
-    limiteExibicao = 60;
-    if (inputBuscaConsultor) inputBuscaConsultor.value = "";
-
-    const primeiraLinha = linhas[0];
-    let sep = ",";
-    if (primeiraLinha.includes(";")) sep = ";";
-    else if (primeiraLinha.includes("\t")) sep = "\t";
-
-    for (let i = 1; i < linhas.length; i++) {
-        const colunas = linhas[i].split(sep).map(c => c.replace(/^"|"$/g, '').trim());
-        if (colunas.length < 4) continue;
-
-        let matricula = colunas[0] || `SEM_MATRICULA_${i}`;
-        let clienteBruto = colunas[1] || "";
-        let dataOriginal = colunas[2] || "";
-        let vendedorBruto = colunas[3] || "NÃO IDENTIFICADO";
-        let prospec = (colunas[4] || "FILIAÇÃO").toUpperCase();
-        let modalidade = (colunas[5] || "CRÉDITO").toUpperCase();
-        let statusBruto = (colunas[6] || "CONCLUÍDO").toUpperCase();
-
-        const dataFormatada = padronizarData(dataOriginal);
-        if (!dataFormatada || !vendedorBruto) continue;
-
-        const consultorTratado = encurtarNome(vendedorBruto);
-        const clienteTratado = clienteBruto ? encurtarNome(clienteBruto) : "Cliente";
-
-        let modalidadeFinal = "CRÉDITO";
-        if (modalidade.includes("DÉB") || modalidade.includes("DEB")) modalidadeFinal = "DÉBITO";
-        else if (modalidade.includes("BOL")) modalidadeFinal = "BOLETO";
-        else if (modalidade.includes("CRÉD") || modalidade.includes("CRED")) modalidadeFinal = "CRÉDITO";
-        else modalidadeFinal = "NÃO INFORMADO";
-
-        const statusFinal = statusBruto.includes("NÃO") || statusBruto.includes("NAO") || statusBruto.includes("CANCEL")
-            ? "NAO_CONCLUIDO"
-            : "CONCLUIDO";
-
-        mapaContagemConsultores.set(
-            consultorTratado, 
-            (mapaContagemConsultores.get(consultorTratado) || 0) + 1
-        );
-
-        todasVendasBrutas.push({
-            matricula: matricula,
-            clienteNome: clienteTratado,
-            data: dataFormatada,
-            mesRef: dataFormatada.substring(0, 7),
-            consultorNome: consultorTratado,
-            tipo: prospec.includes("REFILI") ? "REFILIACAO" : "FILIACAO",
-            modalidade: modalidadeFinal,
-            status: statusFinal,
-            importadoEm: Date.now()
-        });
-    }
-
-    consultoresSelecionados.clear();
-    for (const [nome] of mapaContagemConsultores.entries()) {
-        const upper = nome.toUpperCase();
-        if (!upper.includes("WEB") && !upper.includes("SITE") && !upper.includes("DIGITAL") && !upper.includes("B2B")) {
-            consultoresSelecionados.add(nome);
-        }
-    }
-
-    renderizarSeletorConsultores();
-    aplicarFiltroEExibir();
-}
-
-function renderizarSeletorConsultores() {
-    gridChipsConsultores.innerHTML = '';
-    cardFiltroConsultores.style.display = 'flex';
-
-    const termoBusca = inputBuscaConsultor ? inputBuscaConsultor.value.trim().toLowerCase() : "";
-    const listaOrdenada = Array.from(mapaContagemConsultores.entries()).sort((a, b) => b[1] - a[1]);
-
-    listaOrdenada.forEach(([nome, total]) => {
-        if (termoBusca && !nome.toLowerCase().includes(termoBusca)) return;
-
-        const estaSelecionado = consultoresSelecionados.has(nome);
-
-        const chip = document.createElement('div');
-        chip.className = `consultor-chip-label ${estaSelecionado ? 'active' : 'excluded'}`;
-        chip.setAttribute('data-nome', nome);
-        chip.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" ${estaSelecionado ? 'checked' : ''} style="accent-color: #38bdf8; cursor: pointer;">
-                <span style="font-weight: 700;">${nome}</span>
-            </div>
-            <span class="chip-count">${total} vendas</span>
-        `;
-
-        chip.addEventListener('click', (e) => {
-            if (e.target.tagName !== 'INPUT') {
-                const cb = chip.querySelector('input');
-                cb.checked = !cb.checked;
-            }
-            const marcado = chip.querySelector('input').checked;
-            if (marcado) {
-                consultoresSelecionados.add(nome);
-                chip.classList.add('active');
-                chip.classList.remove('excluded');
-            } else {
-                consultoresSelecionados.delete(nome);
-                chip.classList.remove('active');
-                chip.classList.add('excluded');
-            }
-            aplicarFiltroEExibir();
-        });
-
-        gridChipsConsultores.appendChild(chip);
+    Papa.parse(linkInput, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => normalizarPlanilha(results.data),
+      error: (err) => alert('Erro ao carregar link: ' + err.message)
     });
+  } else {
+    alert('Por favor, selecione um arquivo ou cole o link do Google Sheets.');
+  }
 }
 
-inputBuscaConsultor.addEventListener('input', renderizarSeletorConsultores);
-
-btnMarcarTodos.addEventListener('click', () => {
-    for (const [nome] of mapaContagemConsultores.entries()) {
-        consultoresSelecionados.add(nome);
+function parseDataFlexivel(valorData) {
+  if (!valorData) return new Date();
+  if (typeof valorData === 'string') {
+    const limpo = valorData.trim();
+    if (limpo.includes('/')) {
+      const partes = limpo.split(' ')[0].split('/');
+      if (partes.length === 3) {
+        return new Date(parseInt(partes[2], 10), parseInt(partes[1], 10) - 1, parseInt(partes[0], 10));
+      }
     }
-    renderizarSeletorConsultores();
-    aplicarFiltroEExibir();
-});
-
-btnDesmarcarTodos.addEventListener('click', () => {
-    consultoresSelecionados.clear();
-    renderizarSeletorConsultores();
-    aplicarFiltroEExibir();
-});
-
-function obterVendasFiltradas() {
-    return todasVendasBrutas.filter(v => consultoresSelecionados.has(v.consultorNome));
+    const parsed = new Date(valorData);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date();
 }
 
-function aplicarFiltroEExibir() {
-    const vendasValidas = obterVendasFiltradas();
+function padronizarConsultor(nomeBruto) {
+  if (!nomeBruto) return 'VENDA EXTERNA / SITE';
+  const limpo = String(nomeBruto).toUpperCase().trim();
+  
+  if (DICIONARIO_NOMES[limpo]) return DICIONARIO_NOMES[limpo];
 
-    let concluidos = 0;
-    let retidos = 0;
-    let filiacoes = 0;
-    let refiliacoes = 0;
-    let debito = 0;
-    let credito = 0;
-    let boleto = 0;
+  for (const [chave, padrao] of Object.entries(DICIONARIO_NOMES)) {
+    if (limpo.includes(chave) || chave.includes(limpo)) {
+      return padrao;
+    }
+  }
 
-    vendasValidas.forEach(v => {
-        if (v.status === "CONCLUIDO") concluidos++;
-        else retidos++;
+  if (limpo.includes('WEB SITE') || limpo.includes('SITE') || limpo.includes('DIGITAL') || limpo.includes('WHATSAPP') || limpo.includes('RECEPÇÃO')) {
+    return 'VENDA EXTERNA / SITE';
+  }
 
-        if (v.tipo === "REFILIACAO") refiliacoes++;
-        else filiacoes++;
+  return limpo;
+}
 
-        if (v.modalidade === "DÉBITO") debito++;
-        else if (v.modalidade === "BOLETO") boleto++;
-        else credito++;
+function normalizarPlanilha(linhas) {
+  dadosBrutosProcessados = [];
+  mapaConsultores = {};
+
+  linhas.forEach(linha => {
+    const matricula = String(
+      linha['MARÍCULA'] || linha['MATRÍCULA'] || linha['MATRICULA'] || linha['matricula'] || ''
+    ).trim().toUpperCase();
+
+    const cliente = String(
+      linha['CLIENTE'] || linha['cliente'] || linha['Nome do Cliente'] || ''
+    ).trim().toUpperCase();
+
+    const consultorBruto = String(
+      linha['NOME CONSULTOR'] || linha['NOME_CONSULTOR'] || linha['consultor'] || ''
+    ).trim().toUpperCase();
+
+    const consultor = padronizarConsultor(consultorBruto);
+
+    const tipo = String(
+      linha['TIPO DE VENDA'] || linha['tipoVenda'] || linha['TIPO'] || 'FILIAÇÃO'
+    ).trim().toUpperCase();
+
+    const pagamento = String(
+      linha['ORMA DE PAGAMENT'] || linha['FORMA DE PAGAMENTO'] || linha['formaPagamento'] || 'NÃO INFORMADO'
+    ).trim().toUpperCase();
+
+    const statusBruto = String(
+      linha['S TATUS VENDA'] || linha['STATUS VENDA'] || linha['status'] || 'CONCLUÍDO'
+    ).trim().toUpperCase();
+
+    let status = 'PENDENTE';
+    if (statusBruto.includes('CONCLU') || statusBruto === 'OK') status = 'CONCLUÍDO';
+    if (statusBruto.includes('NÃO') || statusBruto.includes('NAO') || statusBruto.includes('RECUS')) status = 'NÃO CONCLUÍDO';
+
+    const isConcluido = status === 'CONCLUÍDO';
+    const campoData = linha['DATA VENDA'] || linha['dataVenda'] || linha['DATA'] || '';
+    const dataObj = parseDataFlexivel(campoData);
+
+    const valorBruto = linha['VALOR'] || linha['valor'] || 66.80;
+    const valor = typeof valorBruto === 'number' ? valorBruto : parseFloat(String(valorBruto).replace(',', '.')) || 66.80;
+
+    if (cliente || matricula) {
+      dadosBrutosProcessados.push({
+        matricula: matricula || 'S/N',
+        cliente: cliente || 'NÃO INFORMADO',
+        dataVenda: dataObj,
+        consultor: consultor,
+        tipoVenda: tipo,
+        formaPagamento: pagamento,
+        status: status,
+        valor: valor,
+        observacao: linha['OBSERVAÇÃO PÓS'] || '',
+        etapasPosVenda: {
+          ligacao: isConcluido,
+          linkEnviado: isConcluido,
+          docsRecebidos: isConcluido
+        }
+      });
+
+      mapaConsultores[consultor] = (mapaConsultores[consultor] || 0) + 1;
+    }
+  });
+
+  montarPainelSelecao();
+  exibirPrevia();
+}
+
+function montarPainelSelecao() {
+  const secao = document.getElementById('secaoSelecaoConsultores');
+  const grid = document.getElementById('gridConsultoresDetectados');
+  secao.style.display = 'block';
+
+  const consultores = Object.keys(mapaConsultores).sort((a, b) => mapaConsultores[b] - mapaConsultores[a]);
+
+  grid.innerHTML = consultores.map(c => `
+    <label class="consultant-chip" data-nome="${c.toLowerCase()}">
+      <input type="checkbox" class="check-consultor" value="${c}" checked onchange="atualizarContagemSelecionados()" />
+      <span class="chip-title" title="${c}">${c}</span>
+      <span class="chip-count">${mapaConsultores[c]}</span>
+    </label>
+  `).join('');
+
+  atualizarContagemSelecionados();
+}
+
+function filtrarChipsConsultores() {
+  const termo = document.getElementById('buscaConsultorImport').value.toLowerCase().trim();
+  const chips = document.querySelectorAll('.consultant-chip');
+
+  chips.forEach(chip => {
+    const nome = chip.getAttribute('data-nome') || '';
+    chip.style.display = nome.includes(termo) ? 'flex' : 'none';
+  });
+}
+
+function toggleTodosConsultores(marcar) {
+  document.querySelectorAll('.consultant-chip').forEach(chip => {
+    if (chip.style.display !== 'none') {
+      const cb = chip.querySelector('.check-consultor');
+      if (cb) cb.checked = marcar;
+    }
+  });
+  atualizarContagemSelecionados();
+}
+
+function atualizarContagemSelecionados() {
+  const selecionados = Array.from(document.querySelectorAll('.check-consultor:checked')).map(cb => cb.value);
+  const totalContratos = dadosBrutosProcessados.filter(d => selecionados.includes(d.consultor)).length;
+  
+  document.getElementById('txtQtdConsultoresSel').textContent = selecionados.length;
+  document.getElementById('txtQtdImportar').textContent = totalContratos;
+}
+
+function obterClasseTipo(tipo) {
+  if (tipo.includes('REFIL')) return 'pill-tipo-refiliacao';
+  return 'pill-tipo-filiacao';
+}
+
+function obterClassePagamento(pag) {
+  if (pag.includes('CRÉD') || pag.includes('CRED')) return 'pill-pag-credito';
+  if (pag.includes('DÉB') || pag.includes('DEB')) return 'pill-pag-debito';
+  if (pag.includes('PIX')) return 'pill-pag-pix';
+  return 'pill-pag-outro';
+}
+
+function obterClasseStatus(status) {
+  if (status === 'CONCLUÍDO') return 'pill-status-concluido';
+  if (status === 'NÃO CONCLUÍDO') return 'pill-status-recusado';
+  return 'pill-status-pendente';
+}
+
+function exibirPrevia() {
+  const secao = document.getElementById('secaoPrevia');
+  const tbody = document.getElementById('corpoPrevia');
+  const badgeQtd = document.getElementById('badgeQtdLida');
+
+  secao.style.display = 'block';
+  badgeQtd.textContent = `${dadosBrutosProcessados.length} linhas lidas`;
+
+  const primeiras10 = dadosBrutosProcessados.slice(0, 10);
+  tbody.innerHTML = primeiras10.map(d => {
+    return `
+      <tr>
+        <td><span class="pill pill-matricula">${d.matricula}</span></td>
+        <td><span class="pill pill-cliente" title="${d.cliente}">${d.cliente}</span></td>
+        <td><span class="pill pill-data">${d.dataVenda.toLocaleDateString('pt-BR')}</span></td>
+        <td><span class="pill pill-consultor">${d.consultor}</span></td>
+        <td><span class="pill ${obterClasseTipo(d.tipoVenda)}">${d.tipoVenda}</span></td>
+        <td><span class="pill ${obterClassePagamento(d.formaPagamento)}">${d.formaPagamento}</span></td>
+        <td><span class="pill ${obterClasseStatus(d.status)}">${d.status}</span></td>
+        <td><span class="pill pill-valor">R$ ${d.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function salvarDadosNoFirestore() {
+  const selecionados = Array.from(document.querySelectorAll('.check-consultor:checked')).map(cb => cb.value);
+  const paraGravar = dadosBrutosProcessados.filter(d => selecionados.includes(d.consultor));
+
+  if (paraGravar.length === 0) {
+    alert('Nenhum consultor selecionado para importação.');
+    return;
+  }
+
+  if (!confirm(`Deseja gravar ${paraGravar.length} contratos no Firestore?`)) return;
+
+  const progressoArea = document.getElementById('progressoArea');
+  const progressoBarra = document.getElementById('progressoBarra');
+  const progressoTexto = document.getElementById('progressoTexto');
+  const progressoPct = document.getElementById('progressoPorcentagem');
+  const btnSalvar = document.getElementById('btnSalvarNoBanco');
+
+  progressoArea.style.display = 'block';
+  btnSalvar.disabled = true;
+
+  const total = paraGravar.length;
+  const TAMANHO_LOTE = 400;
+  let processados = 0;
+
+  for (let i = 0; i < total; i += TAMANHO_LOTE) {
+    const loteAtual = paraGravar.slice(i, i + TAMANHO_LOTE);
+    const batch = db.batch();
+
+    loteAtual.forEach(item => {
+      const novoDocRef = db.collection('vendas').doc();
+      batch.set(novoDocRef, {
+        ...item,
+        dataVenda: firebase.firestore.Timestamp.fromDate(item.dataVenda)
+      });
     });
 
-    document.getElementById('sum-total-linhas').textContent = vendasValidas.length;
-    document.getElementById('sum-consultores-qtd').textContent = consultoresSelecionados.size;
-    document.getElementById('sum-status-concluido').textContent = concluidos;
-    document.getElementById('sum-status-retido').textContent = retidos;
-    document.getElementById('sum-filiacoes-qtd').textContent = filiacoes;
-    document.getElementById('sum-refiliacoes-qtd').textContent = refiliacoes;
-    document.getElementById('sum-debito-qtd').textContent = debito;
-    document.getElementById('sum-credito-qtd').textContent = credito;
-    document.getElementById('sum-boleto-qtd').textContent = boleto;
+    await batch.commit();
+    processados += loteAtual.length;
 
-    summaryContainer.style.display = 'grid';
-    previewCard.style.display = 'flex';
+    const pct = Math.round((processados / total) * 100);
+    progressoBarra.style.width = `${pct}%`;
+    progressoTexto.textContent = `Gravando: ${processados} de ${total}`;
+    progressoPct.textContent = `${pct}%`;
+  }
 
-    renderizarPreviewTabela(vendasValidas);
+  alert('Base de dados atualizada com sucesso!');
+  atualizarContadorBanco();
+  btnSalvar.disabled = false;
+  document.getElementById('secaoSelecaoConsultores').style.display = 'none';
+  document.getElementById('secaoPrevia').style.display = 'none';
 }
 
-function renderizarPreviewTabela(vendas) {
-    tbodyPreview.innerHTML = '';
-    const total = vendas.length;
-    const exibidas = vendas.slice(0, limiteExibicao);
+async function confirmarZerarBanco() {
+  const confirmacao1 = confirm('ATENÇÃO: Isso apagará permanentemente TODAS as vendas do sistema! Tem certeza?');
+  if (!confirmacao1) return;
 
-    exibidas.forEach((v, idx) => {
-        const tr = document.createElement('tr');
-        
-        const partes = v.data.split('-');
-        const dataBr = partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : v.data;
+  const confirmacao2 = prompt('Digite ZERAR em letras maiúsculas para confirmar:');
+  if (confirmacao2 !== 'ZERAR') {
+    alert('Operação cancelada.');
+    return;
+  }
 
-        const tagTipo = v.tipo === 'REFILIACAO'
-            ? `<span class="badge-tag badge-refiliacao">REFILIAÇÃO</span>`
-            : `<span class="badge-tag badge-filiacao">FILIAÇÃO</span>`;
+  const progressoArea = document.getElementById('progressoArea');
+  const progressoBarra = document.getElementById('progressoBarra');
+  const progressoTexto = document.getElementById('progressoTexto');
+  const progressoPct = document.getElementById('progressoPorcentagem');
 
-        let tagModalidade = `<span class="badge-tag badge-credito">CRÉDITO</span>`;
-        if (v.modalidade === 'DÉBITO') tagModalidade = `<span class="badge-tag badge-debito">DÉBITO</span>`;
-        else if (v.modalidade === 'BOLETO') tagModalidade = `<span class="badge-tag badge-boleto">BOLETO</span>`;
+  progressoArea.style.display = 'block';
+  progressoTexto.textContent = 'Apagando registros...';
 
-        const tagStatus = v.status === 'CONCLUIDO'
-            ? `<span class="badge-tag badge-status-concluido">CONCLUÍDO</span>`
-            : `<span class="badge-tag badge-status-retido">NÃO CONCLUÍDO</span>`;
+  try {
+    const snapshot = await db.collection('vendas').get();
+    const total = snapshot.size;
+    let apagados = 0;
 
-        tr.innerHTML = `
-            <td style="color: var(--text-muted); font-size: 0.8rem;">${idx + 1}</td>
-            <td style="font-weight: 800; font-family: monospace; font-size: 0.88rem; color: var(--text-main);">${v.matricula}</td>
-            <td style="font-weight: 600; color: var(--text-main);">${v.clienteNome}</td>
-            <td style="text-align: center; font-weight: 600; color: var(--text-muted); font-size: 0.84rem;">${dataBr}</td>
-            <td style="font-weight: 700; color: #38bdf8; font-size: 0.9rem;">${v.consultorNome}</td>
-            <td style="text-align: center;">${tagTipo}</td>
-            <td style="text-align: center;">${tagModalidade}</td>
-            <td style="text-align: center;">${tagStatus}</td>
-        `;
-        tbodyPreview.appendChild(tr);
-    });
+    const docs = snapshot.docs;
+    const TAMANHO_LOTE = 400;
 
-    statusExibicaoLinhas.textContent = `Exibindo ${exibidas.length} de ${total} vendas filtradas`;
-    contadorLinhasFooter.textContent = `${exibidas.length} de ${total} carregadas`;
+    for (let i = 0; i < docs.length; i += TAMANHO_LOTE) {
+      const lote = docs.slice(i, i + TAMANHO_LOTE);
+      const batch = db.batch();
 
-    btnVerMais.style.display = exibidas.length < total ? 'inline-block' : 'none';
-    btnVerTudo.style.display = exibidas.length < total ? 'inline-block' : 'none';
-    btnRecolher.style.display = limiteExibicao > 60 ? 'inline-block' : 'none';
-}
+      lote.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      apagados += lote.length;
 
-btnVerMais.addEventListener('click', () => {
-    limiteExibicao += 60;
-    renderizarPreviewTabela(obterVendasFiltradas());
-});
-
-btnVerTudo.addEventListener('click', () => {
-    limiteExibicao = todasVendasBrutas.length;
-    renderizarPreviewTabela(obterVendasFiltradas());
-});
-
-btnRecolher.addEventListener('click', () => {
-    limiteExibicao = 60;
-    renderizarPreviewTabela(obterVendasFiltradas());
-});
-
-async function limparColecao(nomeColecao) {
-    const snap = await getDocs(collection(db, nomeColecao));
-    const BATCH_SIZE = 400;
-    const docsArray = snap.docs;
-
-    for (let i = 0; i < docsArray.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db);
-        const chunk = docsArray.slice(i, i + BATCH_SIZE);
-        chunk.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-    }
-}
-
-btnInjetar.addEventListener('click', () => {
-    const vendasFinal = obterVendasFiltradas();
-
-    if (vendasFinal.length === 0) {
-        return exibirModalCustomizado({
-            titulo: "Seleção Vazia",
-            mensagem: "Nenhum consultor selecionado para gravação no banco de dados.",
-            icone: "⚠️",
-            textoBotao: "Entendido",
-            corBotao: "#3b82f6",
-            apenasAviso: true
-        });
+      const pct = Math.round((apagados / total) * 100);
+      progressoBarra.style.width = `${pct}%`;
+      progressoTexto.textContent = `Apagando: ${apagados} de ${total}`;
+      progressoPct.textContent = `${pct}%`;
     }
 
-    const deveResetar = checkResetTotal.checked;
-
-    exibirModalCustomizado({
-        titulo: deveResetar ? "Reset e Gravação Oficial" : "Confirmar Importação",
-        mensagem: deveResetar 
-            ? `O banco de dados de teste será APAGADO e substituído pelas ${vendasFinal.length} vendas de ${consultoresSelecionados.size} consultores selecionados. Deseja prosseguir?`
-            : `Deseja gravar ${vendasFinal.length} vendas de ${consultoresSelecionados.size} consultores no banco atual?`,
-        icone: deveResetar ? "⚠️" : "🚀",
-        textoBotao: "Confirmar Gravação",
-        corBotao: deveResetar ? "#ef4444" : "#10b981",
-        onConfirmar: async () => {
-            btnInjetar.disabled = true;
-            btnInjetar.textContent = "Processando...";
-            progressContainer.style.display = 'block';
-
-            // 1. Reset
-            if (deveResetar) {
-                btnInjetar.textContent = "Limpando banco antigo...";
-                await limparColecao("consultores");
-                await limparColecao("historicos");
-                await limparColecao("vendas");
-                progressFill.style.width = "20%";
-            }
-
-            // 2. Cadastrar Consultores
-            btnInjetar.textContent = "Cadastrando consultores selecionados...";
-            const snapConsultores = await getDocs(collection(db, "consultores"));
-            const mapaConsultores = new Map();
-            snapConsultores.forEach(d => {
-                mapaConsultores.set(d.data().nome.toUpperCase().trim(), d.id);
-            });
-
-            for (const nome of consultoresSelecionados) {
-                const chaveBusca = nome.toUpperCase().trim();
-                if (!mapaConsultores.has(chaveBusca)) {
-                    const novoDoc = doc(collection(db, "consultores"));
-                    await setDoc(novoDoc, {
-                        nome: nome,
-                        foto: "default",
-                        vendas: 0,
-                        ativo: true,
-                        criadoEm: Date.now()
-                    });
-                    mapaConsultores.set(chaveBusca, novoDoc.id);
-                }
-            }
-            progressFill.style.width = "40%";
-
-            // 3. Gravar Vendas
-            btnInjetar.textContent = "Gravando contratos detalhados...";
-            const BATCH_SIZE = 400;
-            const total = vendasFinal.length;
-
-            for (let i = 0; i < total; i += BATCH_SIZE) {
-                const batch = writeBatch(db);
-                const chunk = vendasFinal.slice(i, i + BATCH_SIZE);
-
-                chunk.forEach(v => {
-                    const docRef = doc(collection(db, "vendas"));
-                    const consultorId = mapaConsultores.get(v.consultorNome.toUpperCase().trim()) || "anonimo";
-                    batch.set(docRef, {
-                        ...v,
-                        consultorId: consultorId
-                    });
-                });
-
-                await batch.commit();
-                const progresso = 40 + Math.round(((i + chunk.length) / total) * 35);
-                progressFill.style.width = `${progresso}%`;
-            }
-
-            // 4. Consolidar Históricos Diários (Considerando Vendas Concluídas para Pontuação Oficial)
-            btnInjetar.textContent = "Gerando fechamentos diários...";
-            const agrupadoPorData = {};
-            vendasFinal.forEach(v => {
-                if (!agrupadoPorData[v.data]) agrupadoPorData[v.data] = {};
-                const cNome = v.consultorNome;
-                if (!agrupadoPorData[v.data][cNome]) {
-                    agrupadoPorData[v.data][cNome] = {
-                        id: mapaConsultores.get(cNome.toUpperCase().trim()) || cNome,
-                        nome: cNome,
-                        foto: "default",
-                        vendas: 0,
-                        filiacoes: 0,
-                        refiliacoes: 0,
-                        debito: 0,
-                        credito: 0,
-                        boleto: 0,
-                        concluidas: 0,
-                        naoConcluidas: 0
-                    };
-                }
-                
-                if (v.status === "CONCLUIDO") {
-                    agrupadoPorData[v.data][cNome].vendas++;
-                    agrupadoPorData[v.data][cNome].concluidas++;
-                } else {
-                    agrupadoPorData[v.data][cNome].naoConcluidas++;
-                }
-
-                if (v.tipo === "FILIACAO") agrupadoPorData[v.data][cNome].filiacoes++;
-                else agrupadoPorData[v.data][cNome].refiliacoes++;
-
-                if (v.modalidade === "DÉBITO") agrupadoPorData[v.data][cNome].debito++;
-                else if (v.modalidade === "BOLETO") agrupadoPorData[v.data][cNome].boleto++;
-                else agrupadoPorData[v.data][cNome].credito++;
-            });
-
-            for (const [dataCiclo, mapaRanking] of Object.entries(agrupadoPorData)) {
-                const rankingArray = Object.values(mapaRanking).sort((a, b) => b.vendas - a.vendas);
-                await setDoc(doc(db, "historicos", dataCiclo), {
-                    dataCiclo: dataCiclo,
-                    ultimaAtualizacao: Date.now(),
-                    ranking: rankingArray
-                });
-            }
-
-            progressFill.style.width = "100%";
-
-            exibirModalCustomizado({
-                titulo: "Sucesso!",
-                mensagem: `${vendasFinal.length} vendas reais de ${consultoresSelecionados.size} consultores foram importadas e consolidadas com sucesso.`,
-                icone: "✅",
-                textoBotao: "Ir para o Painel",
-                corBotao: "#10b981",
-                apenasAviso: true,
-                onConfirmar: () => {
-                    window.location.href = "admin.html";
-                }
-            });
-        }
-    });
-});
+    alert('Banco de dados zerado com sucesso.');
+    atualizarContadorBanco();
+    progressoArea.style.display = 'none';
+  } catch (err) {
+    alert('Erro ao zerar banco: ' + err.message);
+  }
+}

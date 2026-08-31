@@ -1,27 +1,129 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ranking de Vendas</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ranking de Vendas - Tempo Real</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
-<body>
-    <div class="ranking-container">
-        <!-- Cabeçalho do Ranking -->
-        <div class="header">
-            <div class="cabecalho-colunas">
-                <span>CONSULTOR</span>
-                <span>VENDAS</span>
-            </div>
-        </div>
-        
-        <!-- Lista onde os consultores vão aparecer em cards -->
-        <ul id="lista-ranking">
-            <!-- Renderizado dinamicamente pelo script.js -->
-        </ul>
+<body class="theme-dracula">
+
+  <div id="navbar-container"></div>
+
+  <!-- Toast de Notificação em Tempo Real -->
+  <div id="toastNovaVenda" class="sale-toast" style="display: none;">
+    <div class="toast-icon"><i class="fa-solid fa-bolt text-yellow"></i></div>
+    <div class="toast-body">
+      <h4 id="toastTitulo">NOVA VENDA CONFIRMADA!</h4>
+      <p id="toastDescricao">Consultor acabou de fechar um contrato.</p>
     </div>
+  </div>
+
+  <main class="dashboard-container">
     
-    <script type="module" src="script.js"></script>
+    <!-- Hero Bar do Ranking -->
+    <div class="ranking-hero-bar">
+      <div class="hero-left">
+        <div class="hero-title-wrap">
+          <i class="fa-solid fa-trophy hero-trophy-icon"></i>
+          <div>
+            <h2>Quadro de Liderança e Produção</h2>
+            <p class="subtitle-text">Acompanhamento ao vivo de volume, conversões e ranking da equipe.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-live-stats">
+        <div class="live-stat-pill">
+          <span class="dot-live"></span>
+          <span>Hoje: <strong id="heroTotalHoje" class="text-green">0 vendas</strong> (<strong id="heroValorHoje">R$ 0,00</strong>)</span>
+        </div>
+        <div class="live-stat-pill">
+          <i class="fa-solid fa-crown text-yellow"></i>
+          <span>Líder do Dia: <strong id="heroLiderHoje" class="text-yellow">--</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid com as Boxes Lado a Lado -->
+    <div class="rankings-dual-grid mt-4">
+      
+      <!-- Box 1: Ranking Diário (Foco em Velocidade & Dia Atual) -->
+      <section class="card ranking-card ranking-card-diario">
+        <div class="card-header">
+          <div class="header-title">
+            <div class="header-icon-badge badge-diario">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+              <h2>Ranking Diário</h2>
+              <span class="subtitle-text" id="labelDataHoje">--/--/----</span>
+            </div>
+          </div>
+          <span class="badge badge-date" id="badgeTotalDiario">0 Confirmadas</span>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table ranking-table">
+            <thead>
+              <tr>
+                <th style="width: 70px;" class="text-center">Pos.</th>
+                <th>Consultor</th>
+                <th class="text-center">Lançadas</th>
+                <th class="text-center">Efetivadas</th>
+                <th class="text-right">Total (R$)</th>
+              </tr>
+            </thead>
+            <tbody id="corpoRankingDiario">
+              <tr><td colspan="5" class="loading">Carregando ranking de hoje...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Box 2: Ranking Mensal (Foco em Campeonato & Ciclo) -->
+      <section class="card ranking-card ranking-card-mensal">
+        <div class="card-header">
+          <div class="header-title">
+            <div class="header-icon-badge badge-mensal">
+              <i class="fa-solid fa-award"></i>
+            </div>
+            <div>
+              <h2>Ranking Mensal</h2>
+              <span class="subtitle-text" id="labelMesAtual">Mês Atual</span>
+            </div>
+          </div>
+          <span class="badge badge-month" id="badgeTotalMensal">0 Confirmadas</span>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table ranking-table">
+            <thead>
+              <tr>
+                <th style="width: 70px;" class="text-center">Pos.</th>
+                <th>Consultor</th>
+                <th class="text-center">Lançadas</th>
+                <th class="text-center">Efetivadas</th>
+                <th class="text-right">Total Gerado (R$)</th>
+              </tr>
+            </thead>
+            <tbody id="corpoRankingMensal">
+              <tr><td colspan="5" class="loading">Carregando ranking do mês...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="navbar.js"></script>
+  <script src="ranking.js"></script>
 </body>
 </html>

@@ -1,446 +1,475 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-    getFirestore, collection, getDocs, query, where 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+const db = firebase.firestore();
+let vendasCache = [];
+let vendasFiltradasAtuais = [];
+let limiteExibicao = 10;
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDgtHlqlv4meTjW4VyJ8HrVCfUqMHaoUp0",
-  authDomain: "rankingvendas-d56da.firebaseapp.com",
-  projectId: "rankingvendas-d56da",
-  storageBucket: "rankingvendas-d56da.firebasestorage.app",
-  messagingSenderId: "55208086303",
-  appId: "1:55208086303:web:fd78e3481750c04acf3e2a"
-};
+let chartDiarioInstancia = null;
+let chartPagamentosInstancia = null;
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+function formatarNomeCurto(nome) {
+  if (!nome || typeof nome !== 'string') return 'NÃO INFORMADO';
+  const limpo = nome.trim().replace(/\s+/g, ' ');
+  
+  if (
+    limpo.startsWith('VENDA EXTERNA') ||
+    limpo.includes('SITE') ||
+    limpo === 'NÃO INFORMADO' ||
+    limpo === 'S/N' ||
+    limpo === 'Geral da Equipe' ||
+    limpo === 'Visão Geral da Equipe'
+  ) {
+    return limpo;
+  }
 
-const temaSalvo = localStorage.getItem('ranking_tema_preferido') || 'default';
-if (temaSalvo === 'dracula') document.body.classList.add('theme-dracula');
-else if (temaSalvo === 'light') document.body.classList.add('theme-light');
-else if (temaSalvo === 'refuturiza') document.body.classList.add('theme-refuturiza');
+  const partes = limpo.split(' ');
+  if (partes.length <= 2) return limpo;
 
-// Elementos DOM
-const selectConsultor = document.getElementById('select-consultor');
-const selectMes = document.getElementById('select-mes');
-const nomeDisplay = document.getElementById('consultor-nome-display');
-const avatarPlaceholder = document.getElementById('consultor-avatar-placeholder');
-const avatarImg = document.getElementById('consultor-avatar-img');
-const badgePosicaoContainer = document.getElementById('badge-posicao-container');
+  const conectores = ['DE', 'DA', 'DO', 'DOS', 'DAS', 'E'];
+  if (conectores.includes(partes[1].toUpperCase()) && partes[2]) {
+    return `${partes[0]} ${partes[1]} ${partes[2]}`;
+  }
 
-const kpiTotalVendas = document.getElementById('kpi-total-vendas');
-const kpiMediaVendas = document.getElementById('kpi-media-vendas');
-const kpiMelhorDia = document.getElementById('kpi-melhor-dia');
-const kpiPiorDia = document.getElementById('kpi-pior-dia');
+  return `${partes[0]} ${partes[1]}`;
+}
 
-const kpiPodioDias = document.getElementById('kpi-podio-dias');
-const kpiPodioPorcentagem = document.getElementById('kpi-podio-porcentagem');
-const kpiAtivosDias = document.getElementById('kpi-ativos-dias');
-const kpiAtivosPorcentagem = document.getElementById('kpi-ativos-porcentagem');
-const kpiZeradosDias = document.getElementById('kpi-zerados-dias');
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('filtroMesDesempenho').addEventListener('change', aplicarFiltros);
+  document.getElementById('filtroConsultorDesempenho').addEventListener('change', aplicarFiltros);
+  document.getElementById('buscaHistoricoInput').addEventListener('input', filtrarHistoricoTexto);
+  
+  document.getElementById('btnMostrarMais10').addEventListener('click', () => {
+    limiteExibicao += 10;
+    renderizarTabela();
+  });
 
-const tbodyExtrato = document.getElementById('tbody-extrato');
-const extratoQtdTotal = document.getElementById('extrato-qtd-total');
+  document.getElementById('btnMostrarTodos').addEventListener('click', () => {
+    limiteExibicao = vendasFiltradasAtuais.length;
+    renderizarTabela();
+  });
 
-const btnChartBar = document.getElementById('btn-chart-bar');
-const btnChartLine = document.getElementById('btn-chart-line');
-const btnExportarConsultor = document.getElementById('btn-exportar-consultor');
+  document.getElementById('btnRecolher10').addEventListener('click', () => {
+    limiteExibicao = 10;
+    renderizarTabela();
+  });
 
-let chartVendasInstance = null;
-let chartPosicaoInstance = null;
-let tipoGraficoVendas = 'bar';
-let listaContratosConsultor = [];
-let listaConsultores = [];
-
-const agora = new Date();
-const mesPadrao = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
-if (selectMes && !selectMes.value) selectMes.value = mesPadrao;
-
-const paramsUrl = new URLSearchParams(window.location.search);
-let consultorIdAtual = paramsUrl.get('id');
-
-onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        window.location.href = "login.html";
-    } else {
-        inicializar();
-    }
+  iniciarOuvinteVendas();
 });
 
-async function inicializar() {
-    try {
-        const snap = await getDocs(collection(db, "consultores"));
-        selectConsultor.innerHTML = '';
-        listaConsultores = [];
+function parseDataFlexivel(valorData) {
+  if (!valorData) return new Date();
+  if (valorData.toDate && typeof valorData.toDate === 'function') return valorData.toDate();
+  if (valorData instanceof Date) return valorData;
+  if (typeof valorData === 'string') {
+    const limpo = valorData.trim();
+    if (limpo.includes('/')) {
+      const partes = limpo.split(' ')[0].split('/');
+      if (partes.length === 3) {
+        return new Date(parseInt(partes[2], 10), parseInt(partes[1], 10) - 1, parseInt(partes[0], 10));
+      }
+    }
+    const parsed = new Date(valorData);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date();
+}
 
-        snap.forEach(d => {
-            const data = d.data();
-            listaConsultores.push({
-                id: d.id,
-                nome: data.nome || "Consultor Sem Nome",
-                foto: data.foto || "default"
-            });
-        });
-
-        listaConsultores.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-
-        listaConsultores.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.textContent = c.nome;
-            if (consultorIdAtual === c.id) opt.selected = true;
-            selectConsultor.appendChild(opt);
-        });
-
-        if (!consultorIdAtual && listaConsultores.length > 0) {
-            consultorIdAtual = listaConsultores[0].id;
-            selectConsultor.value = consultorIdAtual;
+function extrairConsultor(obj) {
+  const prioridades = ['consultor', 'NOME CONSULTOR', 'NOME_CONSULTOR', 'Nome Consultor', 'nomeConsultor', 'vendedor'];
+  let candidato = '';
+  for (const p of prioridades) {
+    if (obj[p] && String(obj[p]).trim() !== '') {
+      candidato = String(obj[p]).trim();
+      break;
+    }
+  }
+  if (!candidato) {
+    const chaves = Object.keys(obj);
+    for (const k of chaves) {
+      const kNorm = k.toLowerCase().replace(/[^a-z]/g, '');
+      if (kNorm.includes('consultor') || kNorm === 'nome') {
+        const val = obj[k];
+        if (val && typeof val === 'string' && val.trim() !== '') {
+          candidato = val.trim();
+          break;
         }
-
-        carregarDadosConsultor();
-    } catch (err) {
-        console.error("Erro ao inicializar:", err);
+      }
     }
+  }
+  candidato = candidato.toUpperCase();
+  const ehHash = /^[A-Z0-9]{15,}$/.test(candidato) && !candidato.includes(' ');
+  if (ehHash || !candidato) return 'VENDA EXTERNA / SITE';
+  return candidato;
 }
 
-async function carregarDadosConsultor() {
-    if (!consultorIdAtual) return;
+function extrairStatus(obj) {
+  if (!obj || typeof obj !== 'object') return 'PENDENTE';
+  const chaves = ['status', 'STATUS_VENDA', 'STATUS VENDA', 'STATUS', 'statusVenda'];
+  for (const c of chaves) {
+    if (obj[c]) return String(obj[c]).toUpperCase().trim();
+  }
+  return 'CONCLUÍDO';
+}
 
-    const consultorObj = listaConsultores.find(c => c.id === consultorIdAtual);
-    const nomeConsultor = consultorObj ? consultorObj.nome : "Consultor";
-
-    if (nomeDisplay) nomeDisplay.textContent = nomeConsultor;
-
-    if (consultorObj && consultorObj.foto && consultorObj.foto !== "default") {
-        avatarImg.src = consultorObj.foto;
-        avatarImg.style.display = 'block';
-        avatarPlaceholder.style.display = 'none';
-    } else {
-        avatarPlaceholder.textContent = nomeConsultor.charAt(0).toUpperCase();
-        avatarPlaceholder.style.display = 'flex';
-        avatarImg.style.display = 'none';
+function extrairValor(obj) {
+  if (!obj || typeof obj !== 'object') return 66.80;
+  const chaves = ['valor', 'VALOR', 'valorVenda', 'VALOR VENDA', 'total'];
+  for (const c of chaves) {
+    if (obj[c] !== undefined && obj[c] !== null && obj[c] !== '') {
+      const val = obj[c];
+      return typeof val === 'number' ? val : parseFloat(String(val).replace(',', '.')) || 66.80;
     }
-
-    processarMetricasMes(nomeConsultor);
+  }
+  return 66.80;
 }
 
-async function processarMetricasMes(nomeConsultor) {
-    const mesEscolhido = selectMes ? selectMes.value : mesPadrao;
+function iniciarOuvinteVendas() {
+  db.collection('vendas').onSnapshot((snapshot) => {
+    vendasCache = [];
+    const consultoresUnicos = new Set();
 
-    try {
-        const qVendas = query(
-            collection(db, "vendas"),
-            where("mesRef", "==", mesEscolhido)
-        );
-        const snapVendas = await getDocs(qVendas);
+    snapshot.forEach(doc => {
+      const v = { id: doc.id, ...doc.data() };
+      vendasCache.push(v);
+      consultoresUnicos.add(extrairConsultor(v));
+    });
 
-        const todasVendasMes = [];
-        listaContratosConsultor = [];
+    vendasCache.sort((a, b) => {
+      const dataA = parseDataFlexivel(a.dataVenda || a.DATA_VENDA || a.data).getTime();
+      const dataB = parseDataFlexivel(b.dataVenda || b.DATA_VENDA || b.data).getTime();
+      return dataB - dataA;
+    });
 
-        snapVendas.forEach(d => {
-            const v = { id: d.id, ...d.data() };
-            todasVendasMes.push(v);
-            if (v.consultorNome === nomeConsultor) {
-                listaContratosConsultor.push(v);
-            }
-        });
+    preencherSelectConsultores(Array.from(consultoresUnicos).sort());
+    aplicarFiltros();
+  }, (err) => {
+    console.error('Erro ao ler vendas:', err);
+  });
+}
 
-        // 1. Mapear todas as datas do mês
-        const setDatas = new Set();
-        todasVendasMes.forEach(v => {
-            if (v.data) setDatas.add(v.data);
-        });
-        const datasOrdenadas = Array.from(setDatas).sort();
+function preencherSelectConsultores(consultores) {
+  const select = document.getElementById('filtroConsultorDesempenho');
+  const valorAtual = select.value;
+  
+  select.innerHTML = '<option value="TODOS">Visão Geral da Equipe</option>';
+  consultores.forEach(c => {
+    const nomeExibicao = formatarNomeCurto(c);
+    select.innerHTML += `<option value="${c}">${nomeExibicao}</option>`;
+  });
 
-        // 2. Contabilizar vendas diárias e ranking por dia
-        const vendasPorDia = {};
-        const rankingPorDia = {};
+  if (consultores.includes(valorAtual)) {
+    select.value = valorAtual;
+  }
+}
 
-        datasOrdenadas.forEach(d => {
-            vendasPorDia[d] = 0;
-            rankingPorDia[d] = {};
-        });
+function calcularPosicaoRanking(consultorSelecionado, mesFiltro) {
+  if (consultorSelecionado === 'TODOS') return 'Geral da Equipe';
 
-        todasVendasMes.forEach(v => {
-            if (v.status === "CONCLUIDO" && v.data) {
-                const cNome = v.consultorNome;
-                rankingPorDia[v.data][cNome] = (rankingPorDia[v.data][cNome] || 0) + 1;
-                if (cNome === nomeConsultor) {
-                    vendasPorDia[v.data] = (vendasPorDia[v.data] || 0) + 1;
-                }
-            }
-        });
+  const mapa = {};
+  vendasCache.forEach(v => {
+    const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+    if (mesFiltro !== 'TODOS' && dataObj.getMonth().toString() !== mesFiltro) return;
 
-        // 3. Montar dados para os Gráficos
-        const labelsDias = [];
-        const dadosVendas = [];
-        const dadosPosicoes = [];
-
-        let totalConcluidas = 0;
-        let diasComVenda = 0;
-        let diasNoPodio = 0;
-        let melhorQtd = -1;
-        let melhorDataStr = "-";
-        let piorQtd = 999999;
-        let piorDataStr = "-";
-
-        datasOrdenadas.forEach(d => {
-            const p = d.split('-');
-            const diaFormatado = `${p[2]}/${p[1]}`;
-            labelsDias.push(diaFormatado);
-
-            const qtdDia = vendasPorDia[d] || 0;
-            dadosVendas.push(qtdDia);
-            totalConcluidas += qtdDia;
-
-            if (qtdDia > 0) diasComVenda++;
-
-            // Posição no dia
-            const rankingDiaOrdenado = Object.entries(rankingPorDia[d]).sort((a, b) => b[1] - a[1]);
-            const index = rankingDiaOrdenado.findIndex(item => item[0] === nomeConsultor);
-            const posDia = index >= 0 ? (index + 1) : rankingDiaOrdenado.length + 1;
-
-            dadosPosicoes.push(qtdDia > 0 ? posDia : null);
-
-            if (posDia <= 3 && qtdDia > 0) {
-                diasNoPodio++;
-            }
-
-            if (qtdDia > melhorQtd && qtdDia > 0) {
-                melhorQtd = qtdDia;
-                melhorDataStr = `${diaFormatado} (${qtdDia})`;
-            }
-
-            if (qtdDia < piorQtd && qtdDia > 0) {
-                piorQtd = qtdDia;
-                piorDataStr = `${diaFormatado} (${qtdDia})`;
-            }
-        });
-
-        const totalCiclos = datasOrdenadas.length;
-        const mediaPorCiclo = totalCiclos > 0 ? (totalConcluidas / totalCiclos).toFixed(1) : "0.0";
-        const diasZerados = totalCiclos - diasComVenda;
-        const pctPodio = totalCiclos > 0 ? Math.round((diasNoPodio / totalCiclos) * 100) : 0;
-        const pctAtivos = totalCiclos > 0 ? Math.round((diasComVenda / totalCiclos) * 100) : 0;
-
-        if (kpiTotalVendas) kpiTotalVendas.textContent = totalConcluidas;
-        if (kpiMediaVendas) kpiMediaVendas.textContent = mediaPorCiclo;
-        if (kpiMelhorDia) kpiMelhorDia.textContent = melhorQtd > 0 ? melhorDataStr : "-";
-        if (kpiPiorDia) kpiPiorDia.textContent = piorQtd !== 999999 ? piorDataStr : "-";
-
-        if (kpiPodioDias) kpiPodioDias.textContent = `${diasNoPodio} dias`;
-        if (kpiPodioPorcentagem) kpiPodioPorcentagem.textContent = `${pctPodio}% dos ciclos`;
-        if (kpiAtivosDias) kpiAtivosDias.textContent = `${diasComVenda} dias`;
-        if (kpiAtivosPorcentagem) kpiAtivosPorcentagem.textContent = `${pctAtivos}% dos ciclos`;
-        if (kpiZeradosDias) kpiZeradosDias.textContent = `${diasZerados} dias`;
-
-        // 4. Posição Geral no Mês
-        const acumuladoGeral = {};
-        todasVendasMes.forEach(v => {
-            if (v.status === "CONCLUIDO") {
-                acumuladoGeral[v.consultorNome] = (acumuladoGeral[v.consultorNome] || 0) + 1;
-            }
-        });
-
-        const rankingGeralOrdenado = Object.keys(acumuladoGeral).sort((a, b) => acumuladoGeral[b] - acumuladoGeral[a]);
-        const posicaoMes = rankingGeralOrdenado.indexOf(nomeConsultor) + 1;
-
-        if (badgePosicaoContainer) {
-            badgePosicaoContainer.textContent = posicaoMes > 0 ? `${posicaoMes}º Lugar Geral no Mês` : 'Sem classificação';
-        }
-
-        renderizarGraficoVendas(labelsDias, dadosVendas, nomeConsultor);
-        renderizarGraficoPosicoes(labelsDias, dadosPosicoes, nomeConsultor);
-        renderizarExtratoClientes();
-    } catch (err) {
-        console.error("Erro ao processar métricas do consultor:", err);
+    const status = extrairStatus(v);
+    const ehRecusado = status.includes('NÃO') || status.includes('NAO') || status.includes('RECUS') || status.includes('CANCEL');
+    if ((status.includes('CONCLU') || status === 'OK') && !ehRecusado) {
+      const c = extrairConsultor(v);
+      mapa[c] = (mapa[c] || 0) + 1;
     }
+  });
+
+  const ordenados = Object.entries(mapa).sort((a, b) => b[1] - a[1]);
+  const index = ordenados.findIndex(item => item[0] === consultorSelecionado);
+
+  if (index === -1) return 'Sem posição';
+  const pos = index + 1;
+  if (pos === 1) return '🥇 1º Lugar Geral';
+  if (pos === 2) return '🥈 2º Lugar Geral';
+  if (pos === 3) return '🥉 3º Lugar Geral';
+  return `${pos}º Lugar Geral`;
 }
 
-function renderizarGraficoVendas(labels, data, nome) {
-    const canvas = document.getElementById('meuGrafico');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (chartVendasInstance) chartVendasInstance.destroy();
+function aplicarFiltros() {
+  const mesFiltro = document.getElementById('filtroMesDesempenho').value;
+  const consultorFiltro = document.getElementById('filtroConsultorDesempenho').value;
 
-    chartVendasInstance = new Chart(ctx, {
-        type: tipoGraficoVendas,
-        data: {
-            labels: labels,
-            datasets: [{
-                label: `Vendas de ${nome}`,
-                data: data,
-                backgroundColor: tipoGraficoVendas === 'bar' ? '#38bdf8' : 'rgba(56, 189, 248, 0.15)',
-                borderColor: '#38bdf8',
-                borderWidth: 2,
-                borderRadius: 5,
-                tension: 0.35,
-                fill: tipoGraficoVendas === 'line',
-                pointRadius: tipoGraficoVendas === 'line' ? 3 : undefined
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1, color: '#94a3b8' },
-                    grid: { color: 'rgba(255, 255, 255, 0.06)' }
-                },
-                x: {
-                    ticks: { color: '#94a3b8', font: { size: 10 } },
-                    grid: { display: false }
-                }
-            }
-        }
-    });
+  const nomeEl = document.getElementById('nomeConsultorDestaque');
+  const badgePos = document.getElementById('badgePosicaoRanking');
+  const avatarEl = document.getElementById('avatarConsultorDisplay');
+
+  nomeEl.textContent = consultorFiltro === 'TODOS' ? 'Visão Geral da Equipe' : formatarNomeCurto(consultorFiltro);
+  badgePos.textContent = calcularPosicaoRanking(consultorFiltro, mesFiltro);
+
+  if (consultorFiltro !== 'TODOS') {
+    const iniciais = consultorFiltro.split(' ').map(n => n[0]).slice(0, 2).join('');
+    avatarEl.innerHTML = `<span style="font-weight: 700; font-size: 1.4rem;">${iniciais}</span>`;
+  } else {
+    avatarEl.innerHTML = `<i class="fa-solid fa-users"></i>`;
+  }
+
+  vendasFiltradasAtuais = vendasCache.filter(v => {
+    const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+    const consultor = extrairConsultor(v);
+
+    const matchMes = mesFiltro === 'TODOS' || dataObj.getMonth().toString() === mesFiltro;
+    const matchConsultor = consultorFiltro === 'TODOS' || consultor === consultorFiltro;
+
+    return matchMes && matchConsultor;
+  });
+
+  limiteExibicao = 10;
+  atualizarMetricasEDashboards();
+  renderizarTabela();
 }
 
-function renderizarGraficoPosicoes(labels, dataPosicoes, nome) {
-    const canvas = document.getElementById('graficoPosicao');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (chartPosicaoInstance) chartPosicaoInstance.destroy();
+function atualizarMetricasEDashboards() {
+  const consultorFiltro = document.getElementById('filtroConsultorDesempenho').value;
+  let totalLancadas = vendasFiltradasAtuais.length;
+  let efetivadas = 0;
+  let recusadas = 0;
+  let qtdFiliacao = 0;
+  let qtdRefiliacao = 0;
+  let valorTotalEfetivado = 0;
 
-    chartPosicaoInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: `Posição de ${nome}`,
-                data: dataPosicoes,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                borderWidth: 2.5,
-                fill: true,
-                tension: 0.3,
-                spanGaps: true,
-                pointRadius: 4,
-                pointBackgroundColor: '#10b981',
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${ctx.raw}º Lugar`
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    reverse: true, // 1º Lugar no topo
-                    beginAtZero: false,
-                    min: 1,
-                    ticks: {
-                        stepSize: 1,
-                        color: '#94a3b8',
-                        callback: (v) => `${v}º`
-                    },
-                    grid: { color: 'rgba(255, 255, 255, 0.06)' }
-                },
-                x: {
-                    ticks: { color: '#94a3b8', font: { size: 10 } },
-                    grid: { display: false }
-                }
-            }
-        }
-    });
-}
+  const vendasPorDia = {};
+  const pagamentosContagem = { 'Crédito': 0, 'Débito': 0, 'Pix': 0, 'Outros': 0 };
 
-function renderizarExtratoClientes() {
-    if (!tbodyExtrato) return;
-    tbodyExtrato.innerHTML = '';
+  vendasFiltradasAtuais.forEach(v => {
+    const status = extrairStatus(v);
+    const valor = extrairValor(v);
+    const tipo = (v.tipoVenda || v['TIPO DE VENDA'] || 'FILIAÇÃO').toUpperCase();
+    const pag = (v.formaPagamento || v['FORMA DE PAGAMENTO'] || '').toUpperCase();
+    const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+    const diaChave = `${String(dataObj.getDate()).padStart(2, '0')}/${String(dataObj.getMonth() + 1).padStart(2, '0')}`;
 
-    listaContratosConsultor.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+    if (tipo.includes('REFIL')) qtdRefiliacao++;
+    else qtdFiliacao++;
 
-    if (extratoQtdTotal) {
-        extratoQtdTotal.textContent = `${listaContratosConsultor.length} contratos`;
+    if (pag.includes('CRÉD') || pag.includes('CRED')) pagamentosContagem['Crédito']++;
+    else if (pag.includes('DÉB') || pag.includes('DEB')) pagamentosContagem['Débito']++;
+    else if (pag.includes('PIX')) pagamentosContagem['Pix']++;
+    else pagamentosContagem['Outros']++;
+
+    const ehRecusado = status.includes('NÃO') || status.includes('NAO') || status.includes('RECUS') || status.includes('CANCEL');
+
+    if (ehRecusado) {
+      recusadas++;
+    } else if (status.includes('CONCLU') || status === 'OK') {
+      efetivadas++;
+      valorTotalEfetivado += valor;
+      vendasPorDia[diaChave] = (vendasPorDia[diaChave] || 0) + 1;
     }
+  });
 
-    if (listaContratosConsultor.length === 0) {
-        tbodyExtrato.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum contrato registrado para este mês.</td></tr>`;
-        return;
+  const diasComVenda = Object.keys(vendasPorDia).length;
+  const mediaDia = diasComVenda > 0 ? (efetivadas / diasComVenda).toFixed(1) : '0.0';
+  const receitaMediaDia = diasComVenda > 0 ? (valorTotalEfetivado / diasComVenda) : 0;
+
+  let melhorDia = '--/--';
+  let melhorQtd = 0;
+  for (const [dia, qtd] of Object.entries(vendasPorDia)) {
+    if (qtd > melhorQtd) {
+      melhorQtd = qtd;
+      melhorDia = dia;
     }
+  }
 
-    listaContratosConsultor.forEach(item => {
-        const partes = (item.data || '').split('-');
-        const dataBr = partes.length === 3 ? `${partes[2]}/${partes[1]}` : (item.data || '-');
+  // Presença no Pódio
+  let diasNoPodio = 0;
+  if (consultorFiltro !== 'TODOS') {
+    const vendasPorDiaGlobal = {};
+    vendasCache.forEach(v => {
+      const status = extrairStatus(v);
+      const ehRecusado = status.includes('NÃO') || status.includes('NAO') || status.includes('RECUS') || status.includes('CANCEL');
+      if ((status.includes('CONCLU') || status === 'OK') && !ehRecusado) {
+        const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+        const diaChave = `${String(dataObj.getDate()).padStart(2, '0')}/${String(dataObj.getMonth() + 1).padStart(2, '0')}/${dataObj.getFullYear()}`;
+        const c = extrairConsultor(v);
 
-        const tagTipo = item.tipo === 'REFILIACAO'
-            ? `<span class="badge-tag badge-refiliacao">REFILIAÇÃO</span>`
-            : `<span class="badge-tag badge-filiacao">FILIAÇÃO</span>`;
-
-        let tagMod = `<span class="badge-tag badge-credito">CRÉDITO</span>`;
-        if (item.modalidade === 'DÉBITO') tagMod = `<span class="badge-tag badge-debito">DÉBITO</span>`;
-        else if (item.modalidade === 'BOLETO') tagMod = `<span class="badge-tag badge-boleto">BOLETO</span>`;
-
-        const tagStatus = item.status === 'CONCLUIDO'
-            ? `<span class="badge-tag badge-concluido">CONCLUÍDO</span>`
-            : `<span class="badge-tag badge-retido">NÃO CONCLUÍDO</span>`;
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="color: var(--text-muted); font-size: 0.82rem;">${dataBr}</td>
-            <td style="font-family: monospace; font-weight: 700;">${item.matricula || '-'}</td>
-            <td style="font-weight: 600;">${item.clienteNome || 'Cliente'}</td>
-            <td style="text-align: center;">${tagTipo}</td>
-            <td style="text-align: center;">${tagMod}</td>
-            <td style="text-align: center;">${tagStatus}</td>
-        `;
-        tbodyExtrato.appendChild(tr);
+        if (!vendasPorDiaGlobal[diaChave]) vendasPorDiaGlobal[diaChave] = {};
+        vendasPorDiaGlobal[diaChave][c] = (vendasPorDiaGlobal[diaChave][c] || 0) + 1;
+      }
     });
+
+    for (const dia in vendasPorDiaGlobal) {
+      const rankingDia = Object.entries(vendasPorDiaGlobal[dia]).sort((a, b) => b[1] - a[1]);
+      const top3 = rankingDia.slice(0, 3).map(item => item[0]);
+      if (top3.includes(consultorFiltro)) {
+        diasNoPodio++;
+      }
+    }
+  }
+
+  const taxaConversao = totalLancadas > 0 ? Math.round((efetivadas / totalLancadas) * 100) : 0;
+
+  document.getElementById('cardTotalLancadas').textContent = totalLancadas;
+  document.getElementById('statTotalValor').textContent = `R$ ${valorTotalEfetivado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  document.getElementById('statMediaDia').textContent = mediaDia;
+  document.getElementById('statMelhorFechamento').textContent = melhorDia;
+  document.getElementById('statMelhorQtd').textContent = `${melhorQtd} vendas`;
+  document.getElementById('cardTotalRecusadas').textContent = recusadas;
+  
+  document.getElementById('cardQtdCredito').textContent = pagamentosContagem['Crédito'];
+  document.getElementById('cardQtdDebito').textContent = pagamentosContagem['Débito'];
+  document.getElementById('cardQtdPix').textContent = pagamentosContagem['Pix'];
+  document.getElementById('cardQtdOutros').textContent = pagamentosContagem['Outros'];
+
+  document.getElementById('cardQtdFiliacao').textContent = qtdFiliacao;
+  document.getElementById('cardQtdRefiliacao').textContent = qtdRefiliacao;
+
+  document.getElementById('statPodioDias').textContent = consultorFiltro === 'TODOS' ? `${diasComVenda} dias` : `${diasNoPodio} dias`;
+  document.getElementById('statDiasAtivos').textContent = `${diasComVenda} dias`;
+  document.getElementById('statTaxaEfetiva').textContent = `${taxaConversao}%`;
+  document.getElementById('statReceitaMediaDia').textContent = `R$ ${receitaMediaDia.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  document.getElementById('txtQtdTotalBtn').textContent = totalLancadas;
+
+  renderizarGraficos(vendasPorDia, pagamentosContagem);
 }
 
-if (btnChartBar) {
-    btnChartBar.addEventListener('click', () => {
-        tipoGraficoVendas = 'bar';
-        btnChartBar.classList.add('active');
-        if (btnChartLine) btnChartLine.classList.remove('active');
-        carregarDadosConsultor();
-    });
+function renderizarGraficos(vendasPorDia, pagamentos) {
+  const diasOrdenados = Object.keys(vendasPorDia).sort((a, b) => {
+    const [d1, m1] = a.split('/').map(Number);
+    const [d2, m2] = b.split('/').map(Number);
+    return m1 !== m2 ? m1 - m2 : d1 - d2;
+  });
+
+  const valoresDias = diasOrdenados.map(d => vendasPorDia[d]);
+
+  const ctxDiario = document.getElementById('graficoVendasDiarias').getContext('2d');
+  if (chartDiarioInstancia) chartDiarioInstancia.destroy();
+
+  chartDiarioInstancia = new Chart(ctxDiario, {
+    type: 'bar',
+    data: {
+      labels: diasOrdenados.length > 0 ? diasOrdenados : ['Sem dados'],
+      datasets: [{
+        label: 'Vendas Efetivadas',
+        data: valoresDias.length > 0 ? valoresDias : [0],
+        backgroundColor: '#bd93f9',
+        borderRadius: 4,
+        hoverBackgroundColor: '#a371f7'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#6272a4', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#6272a4', precision: 0 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+
+  const ctxPag = document.getElementById('graficoPagamentos').getContext('2d');
+  if (chartPagamentosInstancia) chartPagamentosInstancia.destroy();
+
+  chartPagamentosInstancia = new Chart(ctxPag, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(pagamentos),
+      datasets: [{
+        data: Object.values(pagamentos),
+        backgroundColor: ['#bd93f9', '#50fa7b', '#ff79c6', '#ffb86c'],
+        borderWidth: 2,
+        borderColor: '#282a36'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#f8f8f2', font: { size: 10 } } } },
+      cutout: '65%'
+    }
+  });
 }
 
-if (btnChartLine) {
-    btnChartLine.addEventListener('click', () => {
-        tipoGraficoVendas = 'line';
-        btnChartLine.classList.add('active');
-        if (btnChartBar) btnChartBar.classList.remove('active');
-        carregarDadosConsultor();
-    });
+function filtrarHistoricoTexto() {
+  const busca = document.getElementById('buscaHistoricoInput').value.toLowerCase().trim();
+  renderizarTabela(busca);
 }
 
-if (selectConsultor) {
-    selectConsultor.addEventListener('change', (e) => {
-        consultorIdAtual = e.target.value;
-        carregarDadosConsultor();
-    });
+function obterClasseTipo(tipo) {
+  if (tipo.includes('REFIL')) return 'pill-tipo-refiliacao';
+  return 'pill-tipo-filiacao';
 }
 
-if (selectMes) {
-    selectMes.addEventListener('change', carregarDadosConsultor);
+function obterClassePagamento(pag) {
+  if (pag.includes('CRÉD') || pag.includes('CRED')) return 'pill-pag-credito';
+  if (pag.includes('DÉB') || pag.includes('DEB')) return 'pill-pag-debito';
+  if (pag.includes('PIX')) return 'pill-pag-pix';
+  if (pag.includes('BOL')) return 'pill-pag-boleto';
+  return 'pill-pag-outro';
 }
 
-if (btnExportarConsultor) {
-    btnExportarConsultor.addEventListener('click', () => {
-        if (listaContratosConsultor.length === 0) return;
-        let csv = "data:text/csv;charset=utf-8,Data,Matricula,Cliente,Tipo,Modalidade,Status\n";
-        listaContratosConsultor.forEach(d => {
-            csv += `"${d.data}","${d.matricula}","${d.clienteNome}","${d.tipo}","${d.modalidade}","${d.status}"\n`;
-        });
-        const link = document.createElement("a");
-        link.href = encodeURI(csv);
-        link.download = `Extrato_${nomeDisplay.textContent}_${selectMes.value}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+function obterClasseStatus(status) {
+  const st = String(status || '').toUpperCase();
+  if (st.includes('NÃO') || st.includes('NAO') || st.includes('RECUS') || st.includes('CANCEL')) {
+    return 'pill-status-recusado';
+  }
+  if (st.includes('CONCLU') || st === 'OK') {
+    return 'pill-status-concluido';
+  }
+  return 'pill-status-pendente';
+}
+
+function renderizarTabela(filtroTexto = '') {
+  const tbody = document.getElementById('corpoTabelaDesempenho');
+  const txtContagem = document.getElementById('txtContagemExibicao');
+  const btnMais = document.getElementById('btnMostrarMais10');
+  const btnTodos = document.getElementById('btnMostrarTodos');
+  const btnRecolher = document.getElementById('btnRecolher10');
+
+  if (!tbody) return;
+
+  let listaParaExibir = vendasFiltradasAtuais;
+  if (filtroTexto) {
+    listaParaExibir = listaParaExibir.filter(v => {
+      const cliente = (v.cliente || v.CLIENTE || '').toLowerCase();
+      const matricula = (v.matricula || v.MATRÍCULA || v.MATRICULA || '').toLowerCase();
+      return cliente.includes(filtroTexto) || matricula.includes(filtroTexto);
     });
+  }
+
+  const total = listaParaExibir.length;
+  const listaFatiada = listaParaExibir.slice(0, limiteExibicao);
+
+  txtContagem.textContent = `Exibindo ${listaFatiada.length} de ${total} contratos`;
+
+  btnMais.style.display = limiteExibicao < total ? 'inline-flex' : 'none';
+  btnTodos.style.display = limiteExibicao < total ? 'inline-flex' : 'none';
+  btnRecolher.style.display = limiteExibicao > 10 ? 'inline-flex' : 'none';
+
+  if (listaFatiada.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhuma venda encontrada.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = listaFatiada.map(v => {
+    const status = extrairStatus(v);
+    const valor = extrairValor(v);
+    const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+    const matricula = v.matricula || v.MATRÍCULA || v.MATRICULA || 'S/N';
+    const clienteCompleto = v.cliente || v.CLIENTE || 'NÃO INFORMADO';
+    const consultorCompleto = extrairConsultor(v);
+
+    const clienteExibicao = formatarNomeCurto(clienteCompleto);
+    const consultorExibicao = formatarNomeCurto(consultorCompleto);
+
+    const tipo = v.tipoVenda || v['TIPO DE VENDA'] || 'FILIAÇÃO';
+    const pagamento = v.formaPagamento || v['FORMA DE PAGAMENTO'] || 'NÃO INFORMADO';
+
+    return `
+      <tr>
+        <td><span class="pill pill-matricula">${matricula}</span></td>
+        <td><span class="pill pill-cliente" title="${clienteCompleto}">${clienteExibicao}</span></td>
+        <td><span class="pill pill-data">${dataObj.toLocaleDateString('pt-BR')}</span></td>
+        <td><span class="pill pill-consultor" title="${consultorCompleto}">${consultorExibicao}</span></td>
+        <td><span class="pill ${obterClasseTipo(tipo)}">${tipo}</span></td>
+        <td><span class="pill ${obterClassePagamento(pagamento)}">${pagamento}</span></td>
+        <td><span class="pill ${obterClasseStatus(status)}">${status}</span></td>
+        <td><span class="pill pill-valor">R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></td>
+      </tr>
+    `;
+  }).join('');
 }

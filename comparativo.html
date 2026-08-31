@@ -1,626 +1,154 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comparativo da Equipe - BI</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .comparativo-container {
-            width: 100%;
-            max-width: 1250px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            box-sizing: border-box;
-            padding-bottom: 35px;
-        }
-
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            padding: 14px 20px;
-            border-radius: 12px;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .nav-actions-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .btn-nav-action {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 12px;
-            background: var(--box-bg);
-            border: 1px solid var(--box-border);
-            border-radius: 8px;
-            color: var(--text-main);
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s ease, border-color 0.2s ease;
-        }
-
-        .btn-nav-action:hover {
-            transform: scale(1.03);
-            border-color: var(--box-border-hover);
-        }
-
-        .select-mes-custom {
-            padding: 8px 14px;
-            border-radius: 8px;
-            border: 1px solid var(--box-border);
-            background: var(--input-bg);
-            color: var(--text-main);
-            font-size: 0.88rem;
-            outline: none;
-            cursor: pointer;
-            color-scheme: dark;
-        }
-
-        body.theme-light .select-mes-custom,
-        body.theme-refuturiza .select-mes-custom {
-            color-scheme: light;
-        }
-
-        /* Deck de Consultores */
-        .deck-card {
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 14px;
-            padding: 16px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .deck-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .deck-scroll-container {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            padding: 4px 2px 8px 2px;
-            scrollbar-width: thin;
-            scrollbar-color: var(--box-border) transparent;
-        }
-
-        .deck-scroll-container::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .deck-scroll-container::-webkit-scrollbar-thumb {
-            background: var(--box-border);
-            border-radius: 4px;
-        }
-
-        .consultor-deck-item {
-            flex: 0 0 115px;
-            background: var(--box-bg);
-            border: 1.5px solid var(--box-border);
-            border-radius: 10px;
-            padding: 12px 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            gap: 8px;
-            cursor: pointer;
-            user-select: none;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), 
-                        border-color 0.2s ease, 
-                        box-shadow 0.25s ease, 
-                        opacity 0.2s ease;
-        }
-
-        .consultor-deck-item.active {
-            border-color: #38bdf8;
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, var(--box-bg) 100%);
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.22);
-            opacity: 1;
-        }
-
-        .consultor-deck-item.excluded {
-            opacity: 0.32;
-            filter: grayscale(80%);
-            text-decoration: line-through;
-        }
-
-        .consultor-deck-item.excluded:hover {
-            opacity: 0.9;
-            filter: grayscale(0%);
-            text-decoration: none;
-            border-color: #f59e0b;
-            transform: translateY(-2px);
-        }
-
-        .deck-avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--box-border);
-        }
-
-        .deck-placeholder {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: #ff4d00;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: #fff;
-        }
-
-        .deck-nome {
-            font-size: 0.76rem;
-            font-weight: 700;
-            color: var(--text-main);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
-
-        /* KPIs */
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
-        }
-
-        @media (max-width: 1100px) {
-            .summary-grid { grid-template-columns: repeat(3, 1fr); }
-        }
-
-        @media (max-width: 720px) {
-            .summary-grid { grid-template-columns: 1fr; }
-        }
-
-        .summary-box {
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 12px;
-            padding: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            justify-content: center;
-        }
-
-        .summary-box-mvp {
-            background: #16a34a !important;
-            border: 1px solid #22c55e !important;
-            box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
-        }
-
-        .summary-box-mvp .summary-label,
-        .summary-box-mvp .summary-num {
-            color: #ffffff !important;
-        }
-
-        .summary-box-retidos {
-            background: rgba(239, 68, 68, 0.08) !important;
-            border: 1px solid rgba(239, 68, 68, 0.3) !important;
-        }
-
-        .summary-label {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        .summary-num {
-            font-size: 1.45rem;
-            font-weight: 800;
-            color: var(--text-main);
-            letter-spacing: -0.02em;
-        }
-
-        .btn-ver-retidos {
-            margin-top: 4px;
-            padding: 4px 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            background: rgba(239, 68, 68, 0.15);
-            color: #f87171;
-            font-size: 0.74rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-ver-retidos:hover {
-            background: #ef4444;
-            color: #ffffff;
-            transform: scale(1.02);
-        }
-
-        /* Gráficos */
-        .charts-grid-duo {
-            display: grid;
-            grid-template-columns: 1.4fr 1fr;
-            gap: 16px;
-        }
-
-        @media (max-width: 950px) {
-            .charts-grid-duo { grid-template-columns: 1fr; }
-        }
-
-        .chart-card {
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 14px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            min-height: 320px;
-        }
-
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .chart-header h3 {
-            font-size: 1rem;
-            font-weight: 800;
-            color: var(--text-main);
-        }
-
-        .chart-wrapper {
-            position: relative;
-            flex: 1;
-            width: 100%;
-            min-height: 240px;
-        }
-
-        /* Tabela Comparativa com Medalhas SVG */
-        .table-ranking-card {
-            background: var(--admin-card-bg);
-            border: 1px solid var(--admin-border);
-            border-radius: 14px;
-            padding: 22px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .table-scroll-wrapper {
-            max-height: 480px;
-            overflow-y: auto;
-            border: 1px solid var(--box-border);
-            border-radius: 10px;
-        }
-
-        .tabela-ranking-geral {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-            text-align: left;
-            min-width: 820px;
-        }
-
-        .tabela-ranking-geral th {
-            padding: 13px 14px;
-            color: var(--text-muted);
-            font-size: 0.74rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            border-bottom: 2px solid var(--box-border);
-            position: sticky;
-            top: 0;
-            background: var(--sidebar-bg);
-            z-index: 2;
-        }
-
-        .tabela-ranking-geral td {
-            padding: 14px;
-            border-bottom: 1px solid var(--box-border);
-            color: var(--text-main);
-            font-variant-numeric: tabular-nums;
-            vertical-align: middle;
-        }
-
-        .tabela-ranking-geral tr:hover td {
-            background: var(--box-bg);
-        }
-
-        .medalha-svg-box {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
-        }
-
-        .badge-posicao-num {
-            font-weight: 800;
-            font-size: 0.8rem;
-            width: 28px;
-            height: 28px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: var(--box-bg);
-            border: 1px solid var(--box-border);
-            color: var(--text-muted);
-        }
-
-        .pill-mix {
-            font-size: 0.76rem;
-            font-weight: 800;
-            padding: 3px 8px;
-            border-radius: 6px;
-            letter-spacing: 0.02em;
-        }
-
-        .pill-filiacao-table { background: rgba(56, 189, 248, 0.14); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-        .pill-refiliacao-table { background: rgba(245, 158, 11, 0.14); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-
-        .pill-credito-table { background: rgba(168, 85, 247, 0.14); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
-        .pill-debito-table { background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-        .pill-boleto-table { background: rgba(234, 179, 8, 0.14); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); }
-
-        .pill-taxa {
-            font-size: 0.8rem;
-            font-weight: 800;
-            padding: 4px 10px;
-            border-radius: 6px;
-            background: rgba(16, 185, 129, 0.16);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.35);
-        }
-
-        /* Modal Retidos */
-        .modal-relatorio-content {
-            background: var(--sidebar-bg);
-            border: 1px solid var(--box-border);
-            border-radius: 14px;
-            padding: 22px;
-            width: 100%;
-            max-width: 820px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
-            max-height: 85vh;
-        }
-
-        .tabela-relatorio {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.86rem;
-            text-align: left;
-        }
-
-        .tabela-relatorio th {
-            padding: 10px 12px;
-            color: var(--text-muted);
-            font-size: 0.72rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            border-bottom: 2px solid var(--box-border);
-            position: sticky;
-            top: 0;
-            background: var(--sidebar-bg);
-            z-index: 2;
-        }
-
-        .tabela-relatorio td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--box-border);
-            color: var(--text-main);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comparativo da Equipe - Ranking Vendas</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <div class="comparativo-container">
-        
-        <!-- Header -->
-        <header class="header-bar">
-            <div class="nav-actions-group">
-                <a href="admin.html" class="btn-nav-action">
-                    <span>⚙️</span>
-                    <span>Painel Admin</span>
-                </a>
-                <a href="desempenho.html" class="btn-nav-action">
-                    <span>👤</span>
-                    <span>Dashboard Individual</span>
-                </a>
-            </div>
+<body class="theme-dracula">
 
-            <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Comparativo da Equipe</h2>
+  <div id="navbar-container"></div>
 
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <input type="month" id="select-mes-comparativo" class="select-mes-custom">
-                <button id="btn-exportar-geral" class="btn-acao-modal btn-acao-editar" style="padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
-                    📥 Exportar CSV
-                </button>
-            </div>
-        </header>
-
-        <!-- Deck de Consultores -->
-        <section class="deck-card">
-            <div class="deck-header">
-                <div>
-                    <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">Deck de Consultores</h3>
-                    <p style="font-size: 0.76rem; color: var(--text-muted);">Clique nos consultores para isolar comparações nos gráficos e na tabela.</p>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button type="button" id="btn-deck-marcar-todos" class="btn-nav-action" style="font-size: 0.75rem;">Marcar Todos</button>
-                    <button type="button" id="btn-deck-desmarcar-todos" class="btn-nav-action" style="font-size: 0.75rem;">Desmarcar Todos</button>
-                </div>
-            </div>
-            
-            <div class="deck-scroll-container" id="deck-consultores-container">
-                <!-- Preenchido dinamicamente -->
-            </div>
-        </section>
-
-        <!-- KPIs Executivos com Auditoria de Retidos -->
-        <section class="summary-grid">
-            <div class="summary-box">
-                <span class="summary-label">Volume Total Efetivado</span>
-                <span class="summary-num" id="kpi-total-equipe" style="color: #38bdf8;">0</span>
-            </div>
-
-            <div class="summary-box">
-                <span class="summary-label">Média por Consultor</span>
-                <span class="summary-num" id="kpi-media-equipe">0.0</span>
-            </div>
-
-            <div class="summary-box summary-box-mvp">
-                <span class="summary-label">⭐ MVP do Mês (1º Lugar)</span>
-                <span class="summary-num" id="kpi-mvp-nome" style="font-size: 1.15rem;">-</span>
-            </div>
-
-            <div class="summary-box">
-                <span class="summary-label">Ciclos Registrados</span>
-                <span class="summary-num" id="kpi-ciclos-qtd">0 dias</span>
-            </div>
-
-            <div class="summary-box summary-box-retidos">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span class="summary-label" style="color: #f87171;">Não Concluídos / Retidos</span>
-                </div>
-                <span class="summary-num" id="kpi-retidos-qtd" style="color: #ef4444;">0</span>
-                <button type="button" id="btn-abrir-retidos" class="btn-ver-retidos">🔍 Ver Relatório</button>
-            </div>
-        </section>
-
-        <!-- Gráficos de Ranking e Participação -->
-        <div class="charts-grid-duo">
-            <section class="chart-card">
-                <div class="chart-header">
-                    <h3>Ranking Acumulado da Equipe (Vendas Concluídas)</h3>
-                    <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">Total no Mês</span>
-                </div>
-                <div class="chart-wrapper">
-                    <canvas id="graficoBarrasGeral"></canvas>
-                </div>
-            </section>
-
-            <section class="chart-card">
-                <div class="chart-header">
-                    <h3>Participação no Resultado (%)</h3>
-                    <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 700;">Share Relativo</span>
-                </div>
-                <div class="chart-wrapper">
-                    <canvas id="graficoDonutShare"></canvas>
-                </div>
-            </section>
+  <main class="dashboard-container">
+    
+    <!-- Painel Superior: Cabeçalho, Filtro e Carrossel de Cards dos Consultores -->
+    <section class="card">
+      <div class="card-header flex-wrap">
+        <div class="header-title">
+          <i class="fa-solid fa-users-viewfinder text-purple"></i>
+          <div>
+            <h2>Arena de Comparação da Equipe</h2>
+            <p class="subtitle-text">Selecione os consultores para colocar o desempenho à prova no mano a mano ou em grupo.</p>
+          </div>
         </div>
 
-        <!-- Evolução Diária Multi-Série -->
-        <section class="chart-card">
-            <div class="chart-header">
-                <h3>Evolução das Vendas Dia a Dia</h3>
-                <div class="btn-toggle-group" style="display: flex; gap: 4px; background: var(--box-bg); padding: 2px; border-radius: 6px; border: 1px solid var(--box-border);">
-                    <button class="btn-nav-action" id="btn-evolucao-barras" style="padding: 4px 10px; font-size: 0.78rem;">Barras</button>
-                    <button class="btn-nav-action" id="btn-evolucao-linhas" style="padding: 4px 10px; font-size: 0.78rem;">Linhas</button>
-                </div>
-            </div>
-            <div class="chart-wrapper" style="min-height: 280px;">
-                <canvas id="graficoEvolucaoLinhas"></canvas>
-            </div>
-        </section>
+        <div class="filters-bar">
+          <div class="control-group-inline">
+            <label for="filtroMesComparativo"><i class="fa-solid fa-calendar-days text-purple"></i> Período:</label>
+            <select id="filtroMesComparativo" style="width: 170px;">
+              <option value="TODOS">Todo o Período</option>
+              <option value="0">Janeiro</option>
+              <option value="1">Fevereiro</option>
+              <option value="2">Março</option>
+              <option value="3">Abril</option>
+              <option value="4">Maio</option>
+              <option value="5">Junho</option>
+              <option value="6">Julho</option>
+              <option value="7">Agosto</option>
+              <option value="8">Setembro</option>
+              <option value="9">Outubro</option>
+              <option value="10">Novembro</option>
+              <option value="11">Dezembro</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary-sm" id="btnCompararTop3"><i class="fa-solid fa-trophy text-yellow"></i> Top 3</button>
+          <button class="btn btn-secondary-sm" id="btnCompararTodos"><i class="fa-solid fa-users"></i> Todos</button>
+          <button class="btn btn-secondary-sm" id="btnLimparSelecao"><i class="fa-solid fa-eraser"></i> Limpar</button>
+        </div>
+      </div>
 
-        <!-- Tabela Comparativa de Desempenho com Medalhas SVG -->
-        <section class="table-ranking-card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main);">Tabela Comparativa de Desempenho</h3>
-                    <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Resumo consolidado de conversões e pagamentos da equipe no mês.</p>
-                </div>
-                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 700;" id="contador-tabela-consultores">0 consultores</span>
-            </div>
+      <!-- Carrossel de Cards dos Consultores com Scroll Horizontal -->
+      <div class="consultants-carousel-container">
+        <div class="carousel-header">
+          <span class="selection-label">Consultores em Disputa (clique para selecionar):</span>
+          <span class="carousel-hint"><i class="fa-solid fa-arrows-left-right"></i> Arraste para o lado</span>
+        </div>
+        <div id="cardsConsultoresComparativo" class="consultants-cards-scroll"></div>
+      </div>
+    </section>
 
-            <div class="table-scroll-wrapper">
-                <table class="tabela-ranking-geral">
-                    <thead>
-                        <tr>
-                            <th style="width: 60px; text-align: center;">Pos.</th>
-                            <th>Consultor</th>
-                            <th style="text-align: center;">Concluídas</th>
-                            <th style="text-align: center;">Média / Dia</th>
-                            <th style="text-align: center;">Filiação / Refiliação</th>
-                            <th style="text-align: center;">Mix Pagamento</th>
-                            <th style="text-align: center;">Efetivação</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-ranking-comparativo">
-                        <!-- Preenchido via JS -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
+    <!-- Cards de Destaque da Disputa -->
+    <div class="top-stats-row mt-3">
+      <div class="stat-box stat-highlight-green">
+        <span class="stat-label">Líder em Vendas</span>
+        <h3 id="cardLiderVendas">--</h3>
+        <small class="stat-sub" id="cardLiderVendasQtd">0 vendas efetivadas</small>
+      </div>
+      <div class="stat-box stat-highlight-purple">
+        <span class="stat-label">Melhor Conversão</span>
+        <h3 id="cardLiderConversao">--</h3>
+        <small class="stat-sub" id="cardLiderConversaoTaxa">0% de efetivação</small>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">Volume Efetivado do Grupo</span>
+        <h3 id="cardTotalGrupoEfetivadas">0</h3>
+        <small class="stat-sub" id="cardTotalGrupoLancadas">de 0 lançadas</small>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">Receita Gerada pelo Grupo</span>
+        <h3 id="cardReceitaGrupo">R$ 0,00</h3>
+        <small class="stat-sub">em contratos ativos</small>
+      </div>
+    </div>
+
+    <!-- Gráficos Visuais de Comparação -->
+    <div class="grid-two-charts mt-3">
+      
+      <!-- Gráfico 1: Produção vs Efetivação -->
+      <div class="card chart-panel">
+        <div class="chart-panel-header">
+          <h4><i class="fa-solid fa-chart-column text-purple"></i> Produção vs Efetivação por Consultor</h4>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="graficoBarrasComparativo"></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico 2: Eficiência ou Duelo Direto -->
+      <div class="card chart-panel">
+        <div class="chart-panel-header">
+          <h4><i class="fa-solid fa-chart-line text-green"></i> Eficiência e Desempenho</h4>
+        </div>
+        <div class="chart-canvas-container">
+          <canvas id="graficoRadarComparativo"></canvas>
+        </div>
+      </div>
 
     </div>
 
-    <!-- Modal Relatório de Retidos -->
-    <div id="modal-retidos" class="modal-overlay" style="z-index: 1005;">
-        <div class="modal-relatorio-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--box-border); padding-bottom: 12px;">
-                <div>
-                    <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-main);">Relatório de Vendas Não Concluídas</h3>
-                    <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;" id="modal-retidos-subtitulo">Contratos retidos ou cancelados</p>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button id="btn-exportar-retidos-csv" class="btn-nav-action" style="font-size: 0.78rem; background: #3b82f6; color: #fff;">
-                        📥 Baixar Relatório (CSV)
-                    </button>
-                    <button id="btn-fechar-retidos" class="btn-fechar-sidebar" title="Fechar">&times;</button>
-                </div>
-            </div>
-
-            <div style="max-height: 55vh; overflow-y: auto;">
-                <table class="tabela-relatorio">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Matrícula</th>
-                            <th>Cliente</th>
-                            <th>Consultor</th>
-                            <th style="text-align: center;">Tipo</th>
-                            <th style="text-align: center;">Pagamento</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-retidos-modal">
-                        <!-- Preenchido via JS -->
-                    </tbody>
-                </table>
-            </div>
+    <!-- Tabela Comparativa Detalhada -->
+    <section class="card mt-4">
+      <div class="card-header flex-wrap">
+        <div class="header-title">
+          <i class="fa-solid fa-table-list text-yellow"></i>
+          <div>
+            <h2>Placar Geral de Confronto</h2>
+            <span class="subtitle-text" id="txtContagemComparativo">Exibindo 0 consultores</span>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <script type="module" src="comparativo.js"></script>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Posição</th>
+              <th>Consultor</th>
+              <th>Vendas Lançadas</th>
+              <th>Efetivadas</th>
+              <th>Pendentes</th>
+              <th>Recusadas</th>
+              <th>Taxa de Conversão</th>
+              <th>Total Gerado (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="corpoComparativo">
+            <tr><td colspan="8" class="loading">Carregando dados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="navbar.js"></script>
+  <script src="comparativo.js"></script>
 </body>
 </html>

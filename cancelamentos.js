@@ -1,318 +1,383 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-    getFirestore, collection, doc, getDocs, setDoc, deleteDoc, query, orderBy 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+const db = firebase.firestore();
+let vendasTotalCache = [];
+let canceladosFiltrados = [];
+let limiteExibicao = 10;
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDgtHlqlv4meTjW4VyJ8HrVCfUqMHaoUp0",
-  authDomain: "rankingvendas-d56da.firebaseapp.com",
-  projectId: "rankingvendas-d56da",
-  storageBucket: "rankingvendas-d56da.firebasestorage.app",
-  messagingSenderId: "55208086303",
-  appId: "1:55208086303:web:fd78e3481750c04acf3e2a"
+let chartConsultorInstancia = null;
+let chartPagamentoInstancia = null;
+
+function formatarNomeCurto(nome) {
+  if (!nome || typeof nome !== 'string') return 'NÃO INFORMADO';
+  const limpo = nome.trim().replace(/\s+/g, ' ');
+  
+  if (
+    limpo.startsWith('VENDA EXTERNA') ||
+    limpo.includes('SITE') ||
+    limpo === 'NÃO INFORMADO' ||
+    limpo === 'S/N' ||
+    limpo === 'Geral da Equipe' ||
+    limpo === 'Visão Geral da Equipe'
+  ) {
+    return limpo;
+  }
+
+  const partes = limpo.split(' ');
+  if (partes.length <= 2) return limpo;
+
+  const conectores = ['DE', 'DA', 'DO', 'DOS', 'DAS', 'E'];
+  if (conectores.includes(partes[1].toUpperCase()) && partes[2]) {
+    return `${partes[0]} ${partes[1]} ${partes[2]}`;
+  }
+
+  return `${partes[0]} ${partes[1]}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('filtroMesCancelamentos').addEventListener('change', aplicarFiltros);
+  document.getElementById('filtroConsultorCancelamentos').addEventListener('change', aplicarFiltros);
+  document.getElementById('buscaCancelamentosInput').addEventListener('input', filtrarTexto);
+
+  document.getElementById('btnMostrarMais10').addEventListener('click', () => {
+    limiteExibicao += 10;
+    renderizarTabela();
+  });
+
+  document.getElementById('btnMostrarTodos').addEventListener('click', () => {
+    limiteExibicao = canceladosFiltrados.length;
+    renderizarTabela();
+  });
+
+  document.getElementById('btnRecolher10').addEventListener('click', () => {
+    limiteExibicao = 10;
+    renderizarTabela();
+  });
+
+  iniciarOuvinteVendasCanceladas();
+});
+
+function parseDataFlexivel(valorData) {
+  if (!valorData) return new Date();
+  if (valorData.toDate && typeof valorData.toDate === 'function') return valorData.toDate();
+  if (valorData instanceof Date) return valorData;
+  if (typeof valorData === 'string') {
+    const limpo = valorData.trim();
+    if (limpo.includes('/')) {
+      const partes = limpo.split(' ')[0].split('/');
+      if (partes.length === 3) {
+        return new Date(parseInt(partes[2], 10), parseInt(partes[1], 10) - 1, parseInt(partes[0], 10));
+      }
+    }
+    const parsed = new Date(valorData);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date();
+}
+
+function extrairConsultor(obj) {
+  const prioridades = ['consultor', 'NOME CONSULTOR', 'NOME_CONSULTOR', 'Nome Consultor', 'nomeConsultor', 'vendedor'];
+  let candidato = '';
+  for (const p of prioridades) {
+    if (obj[p] && String(obj[p]).trim() !== '') {
+      candidato = String(obj[p]).trim();
+      break;
+    }
+  }
+  if (!candidato) {
+    const chaves = Object.keys(obj);
+    for (const k of chaves) {
+      const kNorm = k.toLowerCase().replace(/[^a-z]/g, '');
+      if (kNorm.includes('consultor') || kNorm === 'nome') {
+        const val = obj[k];
+        if (val && typeof val === 'string' && val.trim() !== '') {
+          candidato = val.trim();
+          break;
+        }
+      }
+    }
+  }
+  candidato = candidato.toUpperCase();
+  const ehHash = /^[A-Z0-9]{15,}$/.test(candidato) && !candidato.includes(' ');
+  if (ehHash || !candidato) return 'VENDA EXTERNA / SITE';
+  return candidato;
+}
+
+function extrairStatus(obj) {
+  if (!obj || typeof obj !== 'object') return 'PENDENTE';
+  const chaves = ['status', 'STATUS_VENDA', 'STATUS VENDA', 'STATUS', 'statusVenda'];
+  for (const c of chaves) {
+    if (obj[c]) return String(obj[c]).toUpperCase().trim();
+  }
+  return 'CONCLUÍDO';
+}
+
+function extrairValor(obj) {
+  if (!obj || typeof obj !== 'object') return 66.80;
+  const chaves = ['valor', 'VALOR', 'valorVenda', 'VALOR VENDA', 'total'];
+  for (const c of chaves) {
+    if (obj[c] !== undefined && obj[c] !== null && obj[c] !== '') {
+      const val = obj[c];
+      return typeof val === 'number' ? val : parseFloat(String(val).replace(',', '.')) || 66.80;
+    }
+  }
+  return 66.80;
+}
+
+function iniciarOuvinteVendasCanceladas() {
+  db.collection('vendas').onSnapshot((snapshot) => {
+    vendasTotalCache = [];
+    const consultoresSet = new Set();
+
+    snapshot.forEach(doc => {
+      const v = { id: doc.id, ...doc.data() };
+      vendasTotalCache.push(v);
+      consultoresSet.add(extrairConsultor(v));
+    });
+
+    vendasTotalCache.sort((a, b) => {
+      const dataA = parseDataFlexivel(a.dataVenda || a.DATA_VENDA || a.data).getTime();
+      const dataB = parseDataFlexivel(b.dataVenda || b.DATA_VENDA || b.data).getTime();
+      return dataB - dataA;
+    });
+
+    preencherSelectConsultores(Array.from(consultoresSet).sort());
+    aplicarFiltros();
+  }, (err) => {
+    console.error('Erro ao ler cancelamentos:', err);
+  });
+}
+
+function preencherSelectConsultores(consultores) {
+  const select = document.getElementById('filtroConsultorCancelamentos');
+  const valorAtual = select.value;
+
+  select.innerHTML = '<option value="TODOS">Todos os Consultores</option>';
+  consultores.forEach(c => {
+    select.innerHTML += `<option value="${c}">${formatarNomeCurto(c)}</option>`;
+  });
+
+  if (consultores.includes(valorAtual)) {
+    select.value = valorAtual;
+  }
+}
+
+function aplicarFiltros() {
+  const mesFiltro = document.getElementById('filtroMesCancelamentos').value;
+  const consultorFiltro = document.getElementById('filtroConsultorCancelamentos').value;
+
+  const vendasNoPeriodo = vendasTotalCache.filter(v => {
+    const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+    const consultor = extrairConsultor(v);
+
+    const matchMes = mesFiltro === 'TODOS' || dataObj.getMonth().toString() === mesFiltro;
+    const matchConsultor = consultorFiltro === 'TODOS' || consultor === consultorFiltro;
+
+    return matchMes && matchConsultor;
+  });
+
+  canceladosFiltrados = vendasNoPeriodo.filter(v => {
+    const st = extrairStatus(v);
+    return st.includes('NÃO') || st.includes('NAO') || st.includes('RECUS') || st.includes('CANCEL');
+  });
+
+  limiteExibicao = 10;
+  atualizarMetricasEDashboards(vendasNoPeriodo);
+  renderizarTabela();
+}
+
+function atualizarMetricasEDashboards(vendasNoPeriodo) {
+  const totalPeriodo = vendasNoPeriodo.length;
+  const totalCanceladas = canceladosFiltrados.length;
+
+  let receitaPerdida = 0;
+  const perdasPorConsultor = {};
+  const perdasPorPagamento = { 'Crédito': 0, 'Débito': 0, 'Pix': 0, 'Boleto/Outros': 0 };
+  let filiacaoCancelada = 0;
+  let refiliacaoCancelada = 0;
+
+  canceladosFiltrados.forEach(v => {
+    const valor = extrairValor(v);
+    const consultor = extrairConsultor(v);
+    const pag = (v.formaPagamento || v['FORMA DE PAGAMENTO'] || '').toUpperCase();
+    const tipo = (v.tipoVenda || v['TIPO DE VENDA'] || 'FILIAÇÃO').toUpperCase();
+
+    receitaPerdida += valor;
+    perdasPorConsultor[consultor] = (perdasPorConsultor[consultor] || 0) + 1;
+
+    if (pag.includes('CRÉD') || pag.includes('CRED')) perdasPorPagamento['Crédito']++;
+    else if (pag.includes('DÉB') || pag.includes('DEB')) perdasPorPagamento['Débito']++;
+    else if (pag.includes('PIX')) perdasPorPagamento['Pix']++;
+    else perdasPorPagamento['Boleto/Outros']++;
+
+    if (tipo.includes('REFIL')) refiliacaoCancelada++;
+    else filiacaoCancelada++;
+  });
+
+  const taxaCancelamento = totalPeriodo > 0 ? Math.round((totalCanceladas / totalPeriodo) * 100) : 0;
+
+  let modCritica = 'FILIAÇÃO';
+  let modCriticaQtd = filiacaoCancelada;
+  if (refiliacaoCancelada > filiacaoCancelada) {
+    modCritica = 'REFILIAÇÃO';
+    modCriticaQtd = refiliacaoCancelada;
+  }
+
+  document.getElementById('cardTotalCanceladas').textContent = totalCanceladas;
+  document.getElementById('cardReceitaPerdida').textContent = `R$ ${receitaPerdida.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  document.getElementById('cardTaxaCancelamento').textContent = `${taxaCancelamento}%`;
+  document.getElementById('cardModalidadeCritica').textContent = totalCanceladas > 0 ? modCritica : '--';
+  document.getElementById('cardModalidadeCriticaQtd').textContent = `${modCriticaQtd} cancelamentos`;
+  document.getElementById('txtQtdTotalBtn').textContent = totalCanceladas;
+
+  renderizarGraficos(perdasPorConsultor, perdasPorPagamento);
+}
+
+function renderizarGraficos(consultoresMap, pagamentosMap) {
+  const consultoresOrdenados = Object.entries(consultoresMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const labelsConsultores = consultoresOrdenados.map(item => formatarNomeCurto(item[0]));
+  const valoresConsultores = consultoresOrdenados.map(item => item[1]);
+
+  const ctxConsultor = document.getElementById('graficoCanceladosConsultor').getContext('2d');
+  if (chartConsultorInstancia) chartConsultorInstancia.destroy();
+
+  chartConsultorInstancia = new Chart(ctxConsultor, {
+    type: 'bar',
+    data: {
+      labels: labelsConsultores.length > 0 ? labelsConsultores : ['Nenhum cancelamento'],
+      datasets: [{
+        label: 'Vendas Canceladas',
+        data: valoresConsultores.length > 0 ? valoresConsultores : [0],
+        backgroundColor: '#ff5555',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#6272a4', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#6272a4', precision: 0 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+
+  const ctxPag = document.getElementById('graficoCanceladosPagamento').getContext('2d');
+  if (chartPagamentoInstancia) chartPagamentoInstancia.destroy();
+
+  chartPagamentoInstancia = new Chart(ctxPag, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(pagamentosMap),
+      datasets: [{
+        data: Object.values(pagamentosMap),
+        backgroundColor: ['#bd93f9', '#50fa7b', '#ff79c6', '#ffb86c'],
+        borderWidth: 2,
+        borderColor: '#282a36'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#f8f8f2', font: { size: 10 } } } },
+      cutout: '65%'
+    }
+  });
+}
+
+function filtrarTexto() {
+  const termo = document.getElementById('buscaCancelamentosInput').value.toLowerCase().trim();
+  renderizarTabela(termo);
+}
+
+function obterClasseTipo(tipo) {
+  if (tipo.includes('REFIL')) return 'pill-tipo-refiliacao';
+  return 'pill-tipo-filiacao';
+}
+
+function obterClassePagamento(pag) {
+  if (pag.includes('CRÉD') || pag.includes('CRED')) return 'pill-pag-credito';
+  if (pag.includes('DÉB') || pag.includes('DEB')) return 'pill-pag-debito';
+  if (pag.includes('PIX')) return 'pill-pag-pix';
+  if (pag.includes('BOL')) return 'pill-pag-boleto';
+  return 'pill-pag-outro';
+}
+
+function renderizarTabela(filtroTexto = '') {
+  const tbody = document.getElementById('corpoCancelamentos');
+  const txtContagem = document.getElementById('txtContagemCancelados');
+  const btnMais = document.getElementById('btnMostrarMais10');
+  const btnTodos = document.getElementById('btnMostrarTodos');
+  const btnRecolher = document.getElementById('btnRecolher10');
+
+  if (!tbody) return;
+
+  let listaParaExibir = canceladosFiltrados;
+  if (filtroTexto) {
+    listaParaExibir = listaParaExibir.filter(v => {
+      const cliente = (v.cliente || v.CLIENTE || '').toLowerCase();
+      const matricula = (v.matricula || v.MATRÍCULA || v.MATRICULA || '').toLowerCase();
+      const consultor = extrairConsultor(v).toLowerCase();
+      return cliente.includes(filtroTexto) || matricula.includes(filtroTexto) || consultor.includes(filtroTexto);
+    });
+  }
+
+  const total = listaParaExibir.length;
+  const listaFatiada = listaParaExibir.slice(0, limiteExibicao);
+
+  txtContagem.textContent = `Exibindo ${listaFatiada.length} de ${total} contratos`;
+
+  btnMais.style.display = limiteExibicao < total ? 'inline-flex' : 'none';
+  btnTodos.style.display = limiteExibicao < total ? 'inline-flex' : 'none';
+  btnRecolher.style.display = limiteExibicao > 10 ? 'inline-flex' : 'none';
+
+  if (listaFatiada.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 28px;">Nenhuma venda cancelada encontrada no período.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = listaFatiada.map(v => {
+    const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+    const matricula = v.matricula || v.MATRÍCULA || v.MATRICULA || 'S/N';
+    const clienteCompleto = v.cliente || v.CLIENTE || 'NÃO INFORMADO';
+    const consultorCompleto = extrairConsultor(v);
+
+    const clienteExibicao = formatarNomeCurto(clienteCompleto);
+    const consultorExibicao = formatarNomeCurto(consultorCompleto);
+
+    const tipo = v.tipoVenda || v['TIPO DE VENDA'] || 'FILIAÇÃO';
+    const pagamento = v.formaPagamento || v['FORMA DE PAGAMENTO'] || 'NÃO INFORMADO';
+    const obs = v.observacao || 'Sem observação';
+
+    return `
+      <tr>
+        <td><span class="pill pill-matricula">${matricula}</span></td>
+        <td><span class="pill pill-cliente" title="${clienteCompleto}">${clienteExibicao}</span></td>
+        <td><span class="pill pill-data">${dataObj.toLocaleDateString('pt-BR')}</span></td>
+        <td><span class="pill pill-consultor" title="${consultorCompleto}">${consultorExibicao}</span></td>
+        <td><span class="pill ${obterClasseTipo(tipo)}">${tipo}</span></td>
+        <td><span class="pill ${obterClassePagamento(pagamento)}">${pagamento}</span></td>
+        <td><span class="pill pill-cliente" style="max-width: 200px;" title="${obs}">${obs}</span></td>
+        <td><span class="pill pill-status-recusado">NÃO CONCLUÍDO</span></td>
+        <td class="text-center">
+          <button class="btn btn-primary" style="padding: 5px 12px; font-size: 0.78rem; border-radius: 20px;" title="Reabrir para Pós-Venda" onclick="reabrirVenda('${v.id}')">
+            <i class="fa-solid fa-rotate-left"></i> Reabrir
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.reabrirVenda = async function(id) {
+  if (confirm('Deseja mover este contrato de volta para o Pós-Venda (Lavínia) como PENDENTE?')) {
+    await db.collection('vendas').doc(id).update({
+      status: 'PENDENTE',
+      STATUS_VENDA: 'PENDENTE',
+      etapasPosVenda: {
+        ligacao: false,
+        linkEnviado: false,
+        docsRecebidos: false
+      }
+    });
+  }
 };
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-const temaSalvo = localStorage.getItem('ranking_tema_preferido') || 'default';
-if (temaSalvo === 'dracula') document.body.classList.add('theme-dracula');
-else if (temaSalvo === 'light') document.body.classList.add('theme-light');
-else if (temaSalvo === 'refuturiza') document.body.classList.add('theme-refuturiza');
-
-// Elementos DOM
-const filtroData = document.getElementById('filtro-data-auditoria');
-const btnVerTodos = document.getElementById('btn-ver-todos');
-const btnGerenciarMotivos = document.getElementById('btn-gerenciar-motivos');
-const btnExportarAuditoria = document.getElementById('btn-exportar-auditoria');
-
-const kpiTotalCancelado = document.getElementById('kpi-total-cancelado');
-const kpiTotalEventos = document.getElementById('kpi-total-eventos');
-const kpiMotivoPrincipal = document.getElementById('kpi-motivo-principal');
-const kpiConsultorAfetado = document.getElementById('kpi-consultor-afetado');
-
-const tbodyAuditoria = document.getElementById('tbody-auditoria');
-
-// Modal de Motivos
-const modalMotivos = document.getElementById('modal-motivos');
-const btnFecharMotivos = document.getElementById('btn-fechar-motivos');
-const novoMotivoInput = document.getElementById('novo-motivo-input');
-const btnAdicionarMotivo = document.getElementById('btn-adicionar-motivo');
-const listaMotivosContainer = document.getElementById('lista-motivos-container');
-
-let todosRegistros = [];
-let chartConsultores = null;
-let chartMotivos = null;
-
-const CORES_PALETA = [
-    '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', 
-    '#10b981', '#06b6d4', '#f97316', '#a855f7', '#64748b'
-];
-
-onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        window.location.href = "login.html";
-    } else {
-        carregarAuditoria();
-    }
-});
-
-async function carregarAuditoria() {
-    try {
-        // Busca logs da coleção 'cancelamentos' ordenada por timestamp
-        const qLogs = query(collection(db, "cancelamentos"), orderBy("dataEstorno", "desc"));
-        const snap = await getDocs(qLogs);
-
-        todosRegistros = [];
-        snap.forEach(d => {
-            todosRegistros.push({ id: d.id, ...d.data() });
-        });
-
-        // Caso a coleção cancelamentos ainda não tenha registros, tenta mapear vendas retidas
-        if (todosRegistros.length === 0) {
-            const snapVendasRetidas = await getDocs(collection(db, "vendas"));
-            snapVendasRetidas.forEach(d => {
-                const v = d.data();
-                if (v.status === "NAO_CONCLUIDO") {
-                    todosRegistros.push({
-                        id: d.id,
-                        dataEstorno: v.data || "-",
-                        dataCiclo: v.data || "-",
-                        consultorNome: v.consultorNome || "Não Identificado",
-                        quantidade: 1,
-                        motivo: "Não Concluído / Recusado",
-                        autor: "Sistema (Importação)"
-                    });
-                }
-            });
-        }
-
-        renderizarPainel(todosRegistros);
-    } catch (err) {
-        console.error("Erro ao carregar auditoria:", err);
-    }
-}
-
-function renderizarPainel(registros) {
-    let volumeCancelado = 0;
-    const mapaConsultores = {};
-    const mapaMotivos = {};
-
-    tbodyAuditoria.innerHTML = '';
-
-    if (registros.length === 0) {
-        tbodyAuditoria.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 22px;">Nenhum registro de estorno encontrado.</td></tr>`;
-    }
-
-    registros.forEach(r => {
-        const qtd = Number(r.quantidade) || 1;
-        volumeCancelado += qtd;
-
-        const consultor = r.consultorNome || "Não Identificado";
-        const motivo = r.motivo || "Outros";
-
-        mapaConsultores[consultor] = (mapaConsultores[consultor] || 0) + qtd;
-        mapaMotivos[motivo] = (mapaMotivos[motivo] || 0) + qtd;
-
-        // Formatação de Datas
-        const formatarDataBr = (str) => {
-            if (!str || str === "-") return "-";
-            const p = str.split('T')[0].split('-');
-            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : str;
-        };
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="color: var(--text-muted); font-size: 0.85rem;">${formatarDataBr(r.dataEstorno)}</td>
-            <td style="font-weight: 600; font-size: 0.88rem;">${formatarDataBr(r.dataCiclo)}</td>
-            <td style="font-weight: 700; color: #38bdf8;">${consultor}</td>
-            <td style="text-align: center; font-weight: 800; color: #ef4444;">${qtd}</td>
-            <td><span style="font-size: 0.78rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">${motivo}</span></td>
-            <td style="color: var(--text-muted); font-size: 0.84rem;">${r.autor || 'Admin'}</td>
-        `;
-        tbodyAuditoria.appendChild(tr);
-    });
-
-    // Identificar MVP Negativo e Motivo Principal
-    const consultoresOrdenados = Object.entries(mapaConsultores).sort((a, b) => b[1] - a[1]);
-    const motivosOrdenados = Object.entries(mapaMotivos).sort((a, b) => b[1] - a[1]);
-
-    kpiTotalCancelado.textContent = volumeCancelado;
-    kpiTotalEventos.textContent = registros.length;
-    kpiMotivoPrincipal.textContent = motivosOrdenados.length > 0 ? motivosOrdenados[0][0] : "-";
-    kpiConsultorAfetado.textContent = consultoresOrdenados.length > 0 ? `${consultoresOrdenados[0][0]} (${consultoresOrdenados[0][1]})` : "-";
-
-    renderizarGraficoConsultores(consultoresOrdenados);
-    renderizarGraficoMotivos(motivosOrdenados);
-}
-
-function renderizarGraficoConsultores(dados) {
-    const canvas = document.getElementById('graficoConsultores');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (chartConsultores) chartConsultores.destroy();
-
-    const labels = dados.map(d => d[0]);
-    const valores = dados.map(d => d[1]);
-
-    chartConsultores = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: valores,
-                backgroundColor: '#ef4444',
-                borderRadius: 6,
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1, color: '#94a3b8' },
-                    grid: { color: 'rgba(255, 255, 255, 0.06)' }
-                },
-                x: {
-                    ticks: { color: '#94a3b8', font: { size: 10 } },
-                    grid: { display: false }
-                }
-            }
-        }
-    });
-}
-
-function renderizarGraficoMotivos(dados) {
-    const canvas = document.getElementById('graficoMotivos');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (chartMotivos) chartMotivos.destroy();
-
-    if (dados.length === 0) return;
-
-    const labels = dados.map(d => d[0]);
-    const valores = dados.map(d => d[1]);
-    const cores = labels.map((_, idx) => CORES_PALETA[idx % CORES_PALETA.length]);
-
-    chartMotivos = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: valores,
-                backgroundColor: cores,
-                borderWidth: 2,
-                borderColor: '#1e293b'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } }
-                }
-            },
-            cutout: '60%'
-        }
-    });
-}
-
-// Filtro por Data
-filtroData.addEventListener('change', (e) => {
-    const dataFiltro = e.target.value;
-    if (!dataFiltro) {
-        renderizarPainel(todosRegistros);
-        return;
-    }
-    const filtrados = todosRegistros.filter(r => r.dataCiclo === dataFiltro || (r.dataEstorno && r.dataEstorno.startsWith(dataFiltro)));
-    renderizarPainel(filtrados);
-});
-
-btnVerTodos.addEventListener('click', () => {
-    filtroData.value = '';
-    renderizarPainel(todosRegistros);
-});
-
-// Exportação CSV
-btnExportarAuditoria.addEventListener('click', () => {
-    if (todosRegistros.length === 0) return alert("Nenhum registro para exportar.");
-
-    let csv = "data:text/csv;charset=utf-8,Data Estorno,Data Ciclo,Consultor,Quantidade,Motivo,Autor\n";
-    todosRegistros.forEach(r => {
-        csv += `"${r.dataEstorno || ''}","${r.dataCiclo || ''}","${r.consultorNome || ''}","${r.quantidade || 1}","${r.motivo || ''}","${r.autor || ''}"\n`;
-    });
-
-    const link = document.createElement("a");
-    link.href = encodeURI(csv);
-    link.download = `Auditoria_Cancelamentos_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-});
-
-// Gestão de Motivos / Justificativas
-btnGerenciarMotivos.addEventListener('click', abrirModalMotivos);
-btnFecharMotivos.addEventListener('click', () => modalMotivos.classList.remove('active'));
-modalMotivos.addEventListener('click', (e) => {
-    if (e.target === modalMotivos) modalMotivos.classList.remove('active');
-});
-
-async function abrirModalMotivos() {
-    modalMotivos.classList.add('active');
-    await carregarListaMotivos();
-}
-
-async function carregarListaMotivos() {
-    listaMotivosContainer.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Carregando...</span>';
-    const snap = await getDocs(collection(db, "motivos_cancelamento"));
-
-    listaMotivosContainer.innerHTML = '';
-    const motivos = [];
-    snap.forEach(d => motivos.push({ id: d.id, ...d.data() }));
-
-    if (motivos.length === 0) {
-        listaMotivosContainer.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Nenhum motivo cadastrado.</span>';
-        return;
-    }
-
-    motivos.forEach(m => {
-        const item = document.createElement('div');
-        item.className = 'badge-motivo-item';
-        item.innerHTML = `
-            <span>${m.descricao}</span>
-            <button data-id="${m.id}" style="background: transparent; border: none; color: #ef4444; font-weight: bold; cursor: pointer; font-size: 1rem;" title="Remover">&times;</button>
-        `;
-
-        item.querySelector('button').addEventListener('click', async () => {
-            if (confirm(`Deseja excluir o motivo "${m.descricao}"?`)) {
-                await deleteDoc(doc(db, "motivos_cancelamento", m.id));
-                carregarListaMotivos();
-            }
-        });
-
-        listaMotivosContainer.appendChild(item);
-    });
-}
-
-btnAdicionarMotivo.addEventListener('click', async () => {
-    const desc = novoMotivoInput.value.trim();
-    if (!desc) return alert("Digite o texto da justificativa.");
-
-    btnAdicionarMotivo.disabled = true;
-    const novoDoc = doc(collection(db, "motivos_cancelamento"));
-    await setDoc(novoDoc, {
-        descricao: desc,
-        criadoEm: Date.now()
-    });
-
-    novoMotivoInput.value = '';
-    btnAdicionarMotivo.disabled = false;
-    carregarListaMotivos();
-});

@@ -1,619 +1,438 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-    getFirestore, collection, getDocs, query, where 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+const db = firebase.firestore();
+let vendasCache = [];
+let consultoresDisponiveis = [];
+let consultoresSelecionados = new Set();
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDgtHlqlv4meTjW4VyJ8HrVCfUqMHaoUp0",
-  authDomain: "rankingvendas-d56da.firebaseapp.com",
-  projectId: "rankingvendas-d56da",
-  storageBucket: "rankingvendas-d56da.firebasestorage.app",
-  messagingSenderId: "55208086303",
-  appId: "1:55208086303:web:fd78e3481750c04acf3e2a"
-};
+let chartBarrasInstancia = null;
+let chartDireitaInstancia = null;
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+function formatarNomeCurto(nome) {
+  if (!nome || typeof nome !== 'string') return 'NÃO INFORMADO';
+  const limpo = nome.trim().replace(/\s+/g, ' ');
+  
+  if (
+    limpo.startsWith('VENDA EXTERNA') ||
+    limpo.includes('SITE') ||
+    limpo === 'NÃO INFORMADO' ||
+    limpo === 'S/N' ||
+    limpo === 'Geral da Equipe' ||
+    limpo === 'Visão Geral da Equipe'
+  ) {
+    return limpo;
+  }
 
-const temaSalvo = localStorage.getItem('ranking_tema_preferido') || 'default';
-if (temaSalvo === 'dracula') document.body.classList.add('theme-dracula');
-else if (temaSalvo === 'light') document.body.classList.add('theme-light');
-else if (temaSalvo === 'refuturiza') document.body.classList.add('theme-refuturiza');
+  const partes = limpo.split(' ');
+  if (partes.length <= 2) return limpo;
 
-// Elementos DOM
-const selectMes = document.getElementById('select-mes-comparativo');
-const deckContainer = document.getElementById('deck-consultores-container');
-const btnDeckMarcar = document.getElementById('btn-deck-marcar-todos');
-const btnDeckDesmarcar = document.getElementById('btn-deck-desmarcar-todos');
+  const conectores = ['DE', 'DA', 'DO', 'DOS', 'DAS', 'E'];
+  if (conectores.includes(partes[1].toUpperCase()) && partes[2]) {
+    return `${partes[0]} ${partes[1]} ${partes[2]}`;
+  }
 
-const kpiTotalEquipe = document.getElementById('kpi-total-equipe');
-const kpiMediaEquipe = document.getElementById('kpi-media-equipe');
-const kpiMvpNome = document.getElementById('kpi-mvp-nome');
-const kpiCiclosQtd = document.getElementById('kpi-ciclos-qtd');
-const kpiRetidosQtd = document.getElementById('kpi-retidos-qtd');
+  return `${partes[0]} ${partes[1]}`;
+}
 
-const tbodyRankingComparativo = document.getElementById('tbody-ranking-comparativo');
-const contadorTabelaConsultores = document.getElementById('contador-tabela-consultores');
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('filtroMesComparativo').addEventListener('change', processarComparativo);
+  document.getElementById('btnCompararTop3').addEventListener('click', selecionarTop3);
+  document.getElementById('btnCompararTodos').addEventListener('click', selecionarTodos);
+  document.getElementById('btnLimparSelecao').addEventListener('click', limparSelecao);
 
-const btnAbrirRetidos = document.getElementById('btn-abrir-retidos');
-const modalRetidos = document.getElementById('modal-retidos');
-const btnFecharRetidos = document.getElementById('btn-fechar-retidos');
-const tbodyRetidosModal = document.getElementById('tbody-retidos-modal');
-const modalRetidosSubtitulo = document.getElementById('modal-retidos-subtitulo');
-const btnExportarRetidosCsv = document.getElementById('btn-exportar-retidos-csv');
-const btnExportarGeral = document.getElementById('btn-exportar-geral');
-
-const btnEvolucaoBarras = document.getElementById('btn-evolucao-barras');
-const btnEvolucaoLinhas = document.getElementById('btn-evolucao-linhas');
-
-let listaConsultoresGeral = [];
-let consultoresAtivosDeck = new Set();
-let todasVendasMes = [];
-let vendasConcluidasMes = [];
-let vendasNaoConcluidasMes = [];
-let tipoGraficoEvolucao = 'bar';
-
-let chartBarras = null;
-let chartDonut = null;
-let chartEvolucao = null;
-
-const agora = new Date();
-const mesAnoAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
-if (selectMes && !selectMes.value) selectMes.value = mesAnoAtual;
-
-const CORES_PALETA = [
-    '#38bdf8', '#10b981', '#f59e0b', '#a855f7', '#ec4899', 
-    '#06b6d4', '#84cc16', '#eab308', '#6366f1', '#14b8a6', 
-    '#f97316', '#0284c7', '#059669', '#ef4444', '#d946ef'
-];
-
-// SVGs das Medalhas
-const MEDALHA_OURO_SVG = `
-<svg class="medalha-svg-box" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="18" cy="18" r="16" fill="url(#grad-ouro)" stroke="#f59e0b" stroke-width="2"/>
-    <path d="M14 12H18V24H15V14H14V12Z" fill="#78350f" font-weight="bold"/>
-    <circle cx="18" cy="18" r="13" stroke="#fef08a" stroke-width="1.2" stroke-dasharray="2 2"/>
-    <defs>
-        <linearGradient id="grad-ouro" x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#fef08a"/>
-            <stop offset="0.5" stop-color="#fbbf24"/>
-            <stop offset="1" stop-color="#d97706"/>
-        </linearGradient>
-    </defs>
-</svg>`;
-
-const MEDALHA_PRATA_SVG = `
-<svg class="medalha-svg-box" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="18" cy="18" r="16" fill="url(#grad-prata)" stroke="#94a3b8" stroke-width="2"/>
-    <path d="M13.5 14C13.5 12.5 15 11.5 17.5 11.5C20 11.5 21.5 12.5 21.5 14C21.5 16 19 18 14 22V24H22V21.5H17L19.5 19C21.5 17 22.5 15.5 22.5 14C22.5 11.5 20.5 10 17.5 10C14.5 10 12.5 11.5 12.5 14H13.5Z" fill="#334155"/>
-    <circle cx="18" cy="18" r="13" stroke="#ffffff" stroke-width="1.2" stroke-dasharray="2 2"/>
-    <defs>
-        <linearGradient id="grad-prata" x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#ffffff"/>
-            <stop offset="0.5" stop-color="#cbd5e1"/>
-            <stop offset="1" stop-color="#64748b"/>
-        </linearGradient>
-    </defs>
-</svg>`;
-
-const MEDALHA_BRONZE_SVG = `
-<svg class="medalha-svg-box" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="18" cy="18" r="16" fill="url(#grad-bronze)" stroke="#b45309" stroke-width="2"/>
-    <path d="M13 12H21V14.5L16.5 17.5C18.5 17.5 21.5 18.5 21.5 21C21.5 23.5 19 24.5 17 24.5C14 24.5 12.5 23 12.5 21.5H14C14 22.5 15 23.2 17 23.2C19 23.2 20 22.2 20 21C20 19.5 18.5 18.8 16.5 18.8H15V17L19.5 13.5H13V12Z" fill="#451a03"/>
-    <circle cx="18" cy="18" r="13" stroke="#fed7aa" stroke-width="1.2" stroke-dasharray="2 2"/>
-    <defs>
-        <linearGradient id="grad-bronze" x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#ffedd5"/>
-            <stop offset="0.5" stop-color="#fb923c"/>
-            <stop offset="1" stop-color="#c2410c"/>
-        </linearGradient>
-    </defs>
-</svg>`;
-
-onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        window.location.href = "login.html";
-    } else {
-        carregarConsultores();
-    }
+  iniciarOuvinteComparativo();
 });
 
-async function carregarConsultores() {
-    try {
-        const snap = await getDocs(collection(db, "consultores"));
-        listaConsultoresGeral = [];
-        
-        snap.forEach(d => {
-            const data = d.data();
-            listaConsultoresGeral.push({
-                id: d.id,
-                nome: data.nome || "Consultor Sem Nome",
-                foto: data.foto || "default",
-                ativo: data.ativo !== false
-            });
-        });
-
-        listaConsultoresGeral.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
-
-        consultoresAtivosDeck.clear();
-        listaConsultoresGeral.forEach(c => consultoresAtivosDeck.add(c.nome));
-
-        renderizarDeckConsultores();
-        await carregarDadosMes();
-    } catch (err) {
-        console.error("Erro ao carregar consultores:", err);
+function parseDataFlexivel(valorData) {
+  if (!valorData) return new Date();
+  if (valorData.toDate && typeof valorData.toDate === 'function') return valorData.toDate();
+  if (valorData instanceof Date) return valorData;
+  if (typeof valorData === 'string') {
+    const limpo = valorData.trim();
+    if (limpo.includes('/')) {
+      const partes = limpo.split(' ')[0].split('/');
+      if (partes.length === 3) {
+        return new Date(parseInt(partes[2], 10), parseInt(partes[1], 10) - 1, parseInt(partes[0], 10));
+      }
     }
+    const parsed = new Date(valorData);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date();
 }
 
-function renderizarDeckConsultores() {
-    if (!deckContainer) return;
-    deckContainer.innerHTML = '';
+function extrairConsultor(obj) {
+  const prioridades = ['consultor', 'NOME CONSULTOR', 'NOME_CONSULTOR', 'Nome Consultor', 'nomeConsultor', 'vendedor'];
+  for (const p of prioridades) {
+    if (obj[p] && String(obj[p]).trim() !== '') return String(obj[p]).trim().toUpperCase();
+  }
+  return 'NÃO INFORMADO';
+}
 
-    if (listaConsultoresGeral.length === 0) {
-        deckContainer.innerHTML = `<span style="font-size: 0.8rem; color: var(--text-muted); padding: 8px;">Nenhum consultor encontrado.</span>`;
-        return;
+function extrairStatus(obj) {
+  if (!obj || typeof obj !== 'object') return 'PENDENTE';
+  const chaves = ['status', 'STATUS_VENDA', 'STATUS VENDA', 'STATUS', 'statusVenda'];
+  for (const c of chaves) {
+    if (obj[c]) return String(obj[c]).toUpperCase().trim();
+  }
+  return 'CONCLUÍDO';
+}
+
+function extrairValor(obj) {
+  if (!obj || typeof obj !== 'object') return 66.80;
+  const chaves = ['valor', 'VALOR', 'valorVenda', 'VALOR VENDA', 'total'];
+  for (const c of chaves) {
+    if (obj[c] !== undefined && obj[c] !== null && obj[c] !== '') {
+      const val = obj[c];
+      return typeof val === 'number' ? val : parseFloat(String(val).replace(',', '.')) || 66.80;
     }
-
-    listaConsultoresGeral.forEach(c => {
-        const estaAtivo = consultoresAtivosDeck.has(c.nome);
-        const item = document.createElement('div');
-        item.className = `consultor-deck-item ${estaAtivo ? 'active' : 'excluded'}`;
-
-        const avatarHtml = (c.foto && c.foto !== 'default')
-            ? `<img src="${c.foto}" class="deck-avatar" alt="${c.nome}">`
-            : `<div class="deck-placeholder">${c.nome.charAt(0).toUpperCase()}</div>`;
-
-        item.innerHTML = `
-            ${avatarHtml}
-            <span class="deck-nome" title="${c.nome}">${c.nome}</span>
-        `;
-
-        item.addEventListener('click', () => {
-            if (consultoresAtivosDeck.has(c.nome)) {
-                consultoresAtivosDeck.delete(c.nome);
-                item.classList.remove('active');
-                item.classList.add('excluded');
-            } else {
-                consultoresAtivosDeck.add(c.nome);
-                item.classList.add('active');
-                item.classList.remove('excluded');
-            }
-            atualizarVisualizacoesDashboard();
-        });
-
-        deckContainer.appendChild(item);
-    });
+  }
+  return 66.80;
 }
 
-if (btnDeckMarcar) {
-    btnDeckMarcar.addEventListener('click', () => {
-        listaConsultoresGeral.forEach(c => consultoresAtivosDeck.add(c.nome));
-        renderizarDeckConsultores();
-        atualizarVisualizacoesDashboard();
-    });
-}
+function iniciarOuvinteComparativo() {
+  db.collection('vendas').onSnapshot((snapshot) => {
+    vendasCache = [];
+    const consultoresSet = new Set();
 
-if (btnDeckDesmarcar) {
-    btnDeckDesmarcar.addEventListener('click', () => {
-        consultoresAtivosDeck.clear();
-        renderizarDeckConsultores();
-        atualizarVisualizacoesDashboard();
-    });
-}
-
-async function carregarDadosMes() {
-    const mesEscolhido = selectMes ? selectMes.value : mesAnoAtual;
-
-    try {
-        const qVendas = query(
-            collection(db, "vendas"),
-            where("mesRef", "==", mesEscolhido)
-        );
-        const snapVendas = await getDocs(qVendas);
-
-        todasVendasMes = [];
-        vendasConcluidasMes = [];
-        vendasNaoConcluidasMes = [];
-
-        snapVendas.forEach(d => {
-            const v = { id: d.id, ...d.data() };
-            todasVendasMes.push(v);
-            if (v.status === "CONCLUIDO") {
-                vendasConcluidasMes.push(v);
-            } else {
-                vendasNaoConcluidasMes.push(v);
-            }
-        });
-
-        if (kpiRetidosQtd) kpiRetidosQtd.textContent = vendasNaoConcluidasMes.length;
-
-        atualizarVisualizacoesDashboard();
-    } catch (err) {
-        console.error("Erro ao carregar dados de vendas do mês:", err);
-    }
-}
-
-function atualizarVisualizacoesDashboard() {
-    const estatisticasPorConsultor = {};
-    const diasUnicos = new Set();
-    let volumeTotalGeral = 0;
-
-    consultoresAtivosDeck.forEach(nome => {
-        estatisticasPorConsultor[nome] = {
-            nome: nome,
-            concluidas: 0,
-            retidas: 0,
-            totalGeral: 0,
-            filiacao: 0,
-            refiliacao: 0,
-            credito: 0,
-            debito: 0,
-            boleto: 0,
-            diasAtivos: new Set()
-        };
+    snapshot.forEach(doc => {
+      const v = { id: doc.id, ...doc.data() };
+      vendasCache.push(v);
+      consultoresSet.add(extrairConsultor(v));
     });
 
-    todasVendasMes.forEach(v => {
-        const nome = v.consultorNome;
-        if (consultoresAtivosDeck.has(nome)) {
-            const stats = estatisticasPorConsultor[nome];
-            stats.totalGeral++;
+    consultoresDisponiveis = Array.from(consultoresSet).sort();
 
-            if (v.status === "CONCLUIDO") {
-                stats.concluidas++;
-                volumeTotalGeral++;
-                if (v.data) {
-                    diasUnicos.add(v.data);
-                    stats.diasAtivos.add(v.data);
-                }
-
-                if (v.tipo === "REFILIACAO") stats.refiliacao++;
-                else stats.filiacao++;
-
-                if (v.modalidade === "DÉBITO") stats.debito++;
-                else if (v.modalidade === "BOLETO") stats.boleto++;
-                else stats.credito++;
-            } else {
-                stats.retidas++;
-            }
-        }
-    });
-
-    const listaStats = Object.values(estatisticasPorConsultor).sort((a, b) => b.concluidas - a.concluidas);
-    const listaGraficos = listaStats.map(s => [s.nome, s.concluidas]).filter(i => i[1] > 0);
-
-    const qtdConsultoresAtivos = consultoresAtivosDeck.size;
-    const media = qtdConsultoresAtivos > 0 ? (volumeTotalGeral / qtdConsultoresAtivos).toFixed(1) : "0.0";
-    const mvpTexto = listaStats.length > 0 && listaStats[0].concluidas > 0 ? `${listaStats[0].nome} (${listaStats[0].concluidas})` : "-";
-
-    if (kpiTotalEquipe) kpiTotalEquipe.textContent = volumeTotalGeral;
-    if (kpiMediaEquipe) kpiMediaEquipe.textContent = media;
-    if (kpiMvpNome) kpiMvpNome.textContent = mvpTexto;
-    if (kpiCiclosQtd) kpiCiclosQtd.textContent = `${diasUnicos.size} dias`;
-
-    renderizarGraficoBarras(listaGraficos);
-    renderizarGraficoDonut(listaGraficos, volumeTotalGeral);
-    renderizarGraficoEvolucao(listaStats);
-    renderizarTabelaComparativa(listaStats, diasUnicos.size);
-}
-
-function renderizarTabelaComparativa(listaStats, totalCiclosMes) {
-    if (!tbodyRankingComparativo) return;
-    tbodyRankingComparativo.innerHTML = '';
-
-    if (contadorTabelaConsultores) {
-        contadorTabelaConsultores.textContent = `${listaStats.length} consultores ativos`;
+    if (consultoresSelecionados.size === 0) {
+      consultoresDisponiveis.forEach(c => consultoresSelecionados.add(c));
     }
 
-    if (listaStats.length === 0) {
-        tbodyRankingComparativo.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum consultor selecionado no deck.</td></tr>`;
-        return;
-    }
-
-    listaStats.forEach((s, idx) => {
-        const posicao = idx + 1;
-        
-        let medalhaHtml = `<span class="badge-posicao-num">${posicao}º</span>`;
-        if (posicao === 1 && s.concluidas > 0) medalhaHtml = MEDALHA_OURO_SVG;
-        else if (posicao === 2 && s.concluidas > 0) medalhaHtml = MEDALHA_PRATA_SVG;
-        else if (posicao === 3 && s.concluidas > 0) medalhaHtml = MEDALHA_BRONZE_SVG;
-
-        const mediaDiaria = totalCiclosMes > 0 ? (s.concluidas / totalCiclosMes).toFixed(1) : "0.0";
-        const taxaEfetivacao = s.totalGeral > 0 ? Math.round((s.concluidas / s.totalGeral) * 100) : 100;
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td style="text-align: center;">${medalhaHtml}</td>
-            <td style="font-weight: 700; color: #38bdf8; font-size: 0.94rem;">${s.nome}</td>
-            <td style="text-align: center; font-weight: 800; font-size: 1.05rem; color: var(--text-main);">${s.concluidas}</td>
-            <td style="text-align: center; color: var(--text-muted); font-weight: 700; font-size: 0.9rem;">${mediaDiaria}</td>
-            <td style="text-align: center;">
-                <span class="pill-mix pill-filiacao-table">${s.filiacao} F</span>
-                <span style="color: var(--box-border); margin: 0 4px; opacity: 0.5;">|</span>
-                <span class="pill-mix pill-refiliacao-table">${s.refiliacao} R</span>
-            </td>
-            <td style="text-align: center;">
-                <span class="pill-mix pill-credito-table">${s.credito} C</span>
-                <span style="color: var(--box-border); margin: 0 3px; opacity: 0.5;">•</span>
-                <span class="pill-mix pill-debito-table">${s.debito} D</span>
-                <span style="color: var(--box-border); margin: 0 3px; opacity: 0.5;">•</span>
-                <span class="pill-mix pill-boleto-table">${s.boleto} B</span>
-            </td>
-            <td style="text-align: center;">
-                <span class="pill-taxa">${taxaEfetivacao}%</span>
-            </td>
-        `;
-        tbodyRankingComparativo.appendChild(tr);
-    });
+    renderizarCardsSelecao();
+    processarComparativo();
+  }, (err) => {
+    console.error('Erro ao ler vendas para comparativo:', err);
+  });
 }
 
-function renderizarGraficoBarras(listaOrdenada) {
-    const canvas = document.getElementById('graficoBarrasGeral');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (chartBarras) chartBarras.destroy();
+// Renderiza os Cards com Avatar e Scroll Horizontal
+function renderizarCardsSelecao() {
+  const container = document.getElementById('cardsConsultoresComparativo');
+  if (!container) return;
 
-    const labels = listaOrdenada.map(i => i[0]);
-    const dados = listaOrdenada.map(i => i[1]);
-    const cores = labels.map((_, idx) => CORES_PALETA[idx % CORES_PALETA.length]);
+  container.innerHTML = consultoresDisponiveis.map(c => {
+    const isChecked = consultoresSelecionados.has(c);
+    const nomeCurto = formatarNomeCurto(c);
+    const iniciais = nomeCurto.split(' ').map(p => p[0]).slice(0, 2).join('');
 
-    chartBarras = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: dados,
-                backgroundColor: cores,
-                borderRadius: 6,
-                borderWidth: 0
-            }]
+    return `
+      <div class="consultant-card-select ${isChecked ? 'selected' : ''}" onclick="toggleConsultor('${c}')" title="${c}">
+        <div class="card-select-avatar-wrap">
+          <div class="card-select-avatar">${iniciais}</div>
+          <div class="card-select-check"><i class="fa-solid fa-check"></i></div>
+        </div>
+        <span class="card-select-name">${nomeCurto}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+window.toggleConsultor = function(consultor) {
+  if (consultoresSelecionados.has(consultor)) {
+    consultoresSelecionados.delete(consultor);
+  } else {
+    consultoresSelecionados.add(consultor);
+  }
+  renderizarCardsSelecao();
+  processarComparativo();
+};
+
+function selecionarTop3() {
+  const mesFiltro = document.getElementById('filtroMesComparativo').value;
+  const contagem = {};
+
+  vendasCache.forEach(v => {
+    const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+    if (mesFiltro !== 'TODOS' && dataObj.getMonth().toString() !== mesFiltro) return;
+
+    const st = extrairStatus(v);
+    const ehRecusado = st.includes('NÃO') || st.includes('NAO') || st.includes('RECUS') || st.includes('CANCEL');
+    if ((st.includes('CONCLU') || st === 'OK') && !ehRecusado) {
+      const c = extrairConsultor(v);
+      contagem[c] = (contagem[c] || 0) + 1;
+    }
+  });
+
+  const top3 = Object.entries(contagem).sort((a, b) => b[1] - a[1]).slice(0, 3).map(i => i[0]);
+  consultoresSelecionados = new Set(top3);
+  renderizarCardsSelecao();
+  processarComparativo();
+}
+
+function selecionarTodos() {
+  consultoresSelecionados = new Set(consultoresDisponiveis);
+  renderizarCardsSelecao();
+  processarComparativo();
+}
+
+function limparSelecao() {
+  consultoresSelecionados.clear();
+  renderizarCardsSelecao();
+  processarComparativo();
+}
+
+function processarComparativo() {
+  const mesFiltro = document.getElementById('filtroMesComparativo').value;
+  const mapa = {};
+
+  consultoresSelecionados.forEach(c => {
+    mapa[c] = {
+      consultor: c,
+      lancadas: 0,
+      efetivadas: 0,
+      pendentes: 0,
+      recusadas: 0,
+      totalValor: 0,
+      diasAtivos: new Set(),
+      pagamentos: { credito: 0, debito: 0, pix: 0, outros: 0 }
+    };
+  });
+
+  vendasCache.forEach(v => {
+    const dataObj = parseDataFlexivel(v.dataVenda || v.DATA_VENDA || v.data);
+    if (mesFiltro !== 'TODOS' && dataObj.getMonth().toString() !== mesFiltro) return;
+
+    const c = extrairConsultor(v);
+    if (!consultoresSelecionados.has(c)) return;
+
+    const st = extrairStatus(v);
+    const valor = extrairValor(v);
+    const pag = (v.formaPagamento || v['FORMA DE PAGAMENTO'] || '').toUpperCase();
+    const diaChave = `${dataObj.getDate()}/${dataObj.getMonth()}`;
+
+    mapa[c].lancadas += 1;
+
+    const ehRecusado = st.includes('NÃO') || st.includes('NAO') || st.includes('RECUS') || st.includes('CANCEL');
+
+    if (ehRecusado) {
+      mapa[c].recusadas += 1;
+    } else if (st.includes('CONCLU') || st === 'OK') {
+      mapa[c].efetivadas += 1;
+      mapa[c].totalValor += valor;
+      mapa[c].diasAtivos.add(diaChave);
+
+      if (pag.includes('CRÉD') || pag.includes('CRED')) mapa[c].pagamentos.credito++;
+      else if (pag.includes('DÉB') || pag.includes('DEB')) mapa[c].pagamentos.debito++;
+      else if (pag.includes('PIX')) mapa[c].pagamentos.pix++;
+      else mapa[c].pagamentos.outros++;
+    } else {
+      mapa[c].pendentes += 1;
+    }
+  });
+
+  const arrayComparativo = Object.values(mapa).sort((a, b) => b.efetivadas - a.efetivadas || b.lancadas - a.lancadas);
+
+  atualizarTopCards(arrayComparativo);
+  renderizarGraficos(arrayComparativo);
+  montarTabela(arrayComparativo);
+}
+
+function atualizarTopCards(dados) {
+  if (dados.length === 0) {
+    document.getElementById('cardLiderVendas').textContent = '--';
+    document.getElementById('cardLiderVendasQtd').textContent = '0 vendas';
+    document.getElementById('cardLiderConversao').textContent = '--';
+    document.getElementById('cardLiderConversaoTaxa').textContent = '0%';
+    document.getElementById('cardTotalGrupoEfetivadas').textContent = '0';
+    document.getElementById('cardTotalGrupoLancadas').textContent = 'de 0 lançadas';
+    document.getElementById('cardReceitaGrupo').textContent = 'R$ 0,00';
+    return;
+  }
+
+  const liderVendas = dados[0];
+  document.getElementById('cardLiderVendas').textContent = formatarNomeCurto(liderVendas.consultor);
+  document.getElementById('cardLiderVendasQtd').textContent = `${liderVendas.efetivadas} vendas efetivadas`;
+
+  const ordenadosPorConversao = [...dados].filter(d => d.lancadas > 0).sort((a, b) => (b.efetivadas / b.lancadas) - (a.efetivadas / a.lancadas));
+  if (ordenadosPorConversao.length > 0) {
+    const liderConv = ordenadosPorConversao[0];
+    const taxaConv = Math.round((liderConv.efetivadas / liderConv.lancadas) * 100);
+    document.getElementById('cardLiderConversao').textContent = formatarNomeCurto(liderConv.consultor);
+    document.getElementById('cardLiderConversaoTaxa').textContent = `${taxaConv}% de efetivação`;
+  }
+
+  let grupoLancadas = 0;
+  let grupoEfetivadas = 0;
+  let grupoReceita = 0;
+
+  dados.forEach(d => {
+    grupoLancadas += d.lancadas;
+    grupoEfetivadas += d.efetivadas;
+    grupoReceita += d.totalValor;
+  });
+
+  document.getElementById('cardTotalGrupoEfetivadas').textContent = grupoEfetivadas;
+  document.getElementById('cardTotalGrupoLancadas').textContent = `de ${grupoLancadas} lançadas`;
+  document.getElementById('cardReceitaGrupo').textContent = `R$ ${grupoReceita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+}
+
+function renderizarGraficos(dados) {
+  const nomesLabels = dados.map(d => formatarNomeCurto(d.consultor));
+
+  // 1. Gráfico de Barras Agrupadas
+  const ctxBarras = document.getElementById('graficoBarrasComparativo').getContext('2d');
+  if (chartBarrasInstancia) chartBarrasInstancia.destroy();
+
+  chartBarrasInstancia = new Chart(ctxBarras, {
+    type: 'bar',
+    data: {
+      labels: nomesLabels.length > 0 ? nomesLabels : ['Sem seleção'],
+      datasets: [
+        {
+          label: 'Efetivadas',
+          data: dados.map(d => d.efetivadas),
+          backgroundColor: '#50fa7b',
+          borderRadius: 4
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#94a3b8' },
-                    grid: { color: 'rgba(255, 255, 255, 0.06)' }
-                },
-                x: {
-                    ticks: { color: '#94a3b8', font: { size: 10 } },
-                    grid: { display: false }
-                }
-            }
-        }
-    });
-}
-
-function renderizarGraficoDonut(listaOrdenada, total) {
-    const canvas = document.getElementById('graficoDonutShare');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (chartDonut) chartDonut.destroy();
-
-    if (total === 0) return;
-
-    const labels = listaOrdenada.map(i => i[0]);
-    const dados = listaOrdenada.map(i => i[1]);
-    const cores = labels.map((_, idx) => CORES_PALETA[idx % CORES_PALETA.length]);
-
-    chartDonut = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: dados,
-                backgroundColor: cores,
-                borderWidth: 2,
-                borderColor: '#1e293b'
-            }]
+        {
+          label: 'Lançadas',
+          data: dados.map(d => d.lancadas),
+          backgroundColor: '#bd93f9',
+          borderRadius: 4
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { color: '#94a3b8', boxWidth: 12, font: { size: 10 } }
-                }
-            },
-            cutout: '65%'
+        {
+          label: 'Recusadas',
+          data: dados.map(d => d.recusadas),
+          backgroundColor: '#ff5555',
+          borderRadius: 4
         }
-    });
-}
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#f8f8f2', font: { size: 10 } } }
+      },
+      scales: {
+        x: { ticks: { color: '#6272a4', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#6272a4', precision: 0 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
 
-function renderizarGraficoEvolucao(listaStats = []) {
-    const canvas = document.getElementById('graficoEvolucaoLinhas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (chartEvolucao) chartEvolucao.destroy();
+  // 2. Gráfico da Direita Adaptativo
+  const ctxDireita = document.getElementById('graficoRadarComparativo').getContext('2d');
+  const tituloDireita = document.querySelector('#graficoRadarComparativo').closest('.chart-panel').querySelector('h4');
+  if (chartDireitaInstancia) chartDireitaInstancia.destroy();
 
-    const setDatas = new Set();
-    vendasConcluidasMes.forEach(v => {
-        if (v.data) setDatas.add(v.data);
-    });
-    const datasOrdenadas = Array.from(setDatas).sort();
+  if (dados.length === 2) {
+    if (tituloDireita) tituloDireita.innerHTML = '<i class="fa-solid fa-bolt text-yellow"></i> Duelo Direto Mano a Mano';
 
-    const labelsDias = datasOrdenadas.map(d => {
-        const p = d.split('-');
-        return `${p[2]}/${p[1]}`;
-    });
+    const c1 = dados[0];
+    const c2 = dados[1];
+    const taxa1 = c1.lancadas > 0 ? Math.round((c1.efetivadas / c1.lancadas) * 100) : 0;
+    const taxa2 = c2.lancadas > 0 ? Math.round((c2.efetivadas / c2.lancadas) * 100) : 0;
 
-    const mapaConsultorDia = {};
-    consultoresAtivosDeck.forEach(nome => {
-        mapaConsultorDia[nome] = {};
-        datasOrdenadas.forEach(d => mapaConsultorDia[nome][d] = 0);
-    });
-
-    vendasConcluidasMes.forEach(v => {
-        if (consultoresAtivosDeck.has(v.consultorNome) && v.data) {
-            mapaConsultorDia[v.consultorNome][v.data] = (mapaConsultorDia[v.consultorNome][v.data] || 0) + 1;
-        }
-    });
-
-    const consultoresOrdenados = listaStats
-        .filter(s => consultoresAtivosDeck.has(s.nome) && s.concluidas > 0)
-        .map(s => s.nome);
-
-    const datasets = consultoresOrdenados.map((nome, idx) => {
-        const cor = CORES_PALETA[idx % CORES_PALETA.length];
-        const dados = datasOrdenadas.map(d => mapaConsultorDia[nome][d]);
-
-        return {
-            label: nome,
-            data: dados,
-            backgroundColor: tipoGraficoEvolucao === 'bar' ? cor : `${cor}22`,
-            borderColor: cor,
-            borderWidth: 2,
-            borderRadius: 4,
-            tension: 0.3,
-            fill: tipoGraficoEvolucao === 'line' ? false : undefined,
-            pointRadius: tipoGraficoEvolucao === 'line' ? 3 : undefined,
-            pointHoverRadius: 6
-        };
-    });
-
-    chartEvolucao = new Chart(ctx, {
-        type: tipoGraficoEvolucao,
-        data: {
-            labels: labelsDias,
-            datasets: datasets
+    chartDireitaInstancia = new Chart(ctxDireita, {
+      type: 'bar',
+      data: {
+        labels: ['Vendas Efetivadas', 'Taxa Conversão (%)', 'Dias Ativos', 'Vendas Cartão (Créd+Déb)'],
+        datasets: [
+          {
+            label: formatarNomeCurto(c1.consultor),
+            data: [c1.efetivadas, taxa1, c1.diasAtivos.size, c1.pagamentos.credito + c1.pagamentos.debito],
+            backgroundColor: '#50fa7b',
+            borderRadius: 4
+          },
+          {
+            label: formatarNomeCurto(c2.consultor),
+            data: [c2.efetivadas, taxa2, c2.diasAtivos.size, c2.pagamentos.credito + c2.pagamentos.debito],
+            backgroundColor: '#bd93f9',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#f8f8f2', font: { size: 10 } } }
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        color: '#94a3b8',
-                        boxWidth: 12,
-                        font: { size: 11, weight: 'bold' }
-                    }
-                },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1, color: '#94a3b8' },
-                    grid: { color: 'rgba(255, 255, 255, 0.06)' }
-                },
-                x: {
-                    ticks: { color: '#94a3b8', font: { size: 10 } },
-                    grid: { display: false }
-                }
-            }
+        scales: {
+          x: { ticks: { color: '#6272a4' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color: '#8be9fd', font: { size: 10, weight: '600' } }, grid: { display: false } }
         }
+      }
     });
-}
 
-if (btnEvolucaoBarras) {
-    btnEvolucaoBarras.addEventListener('click', () => {
-        tipoGraficoEvolucao = 'bar';
-        atualizarVisualizacoesDashboard();
-    });
-}
+  } else {
+    if (tituloDireita) tituloDireita.innerHTML = '<i class="fa-solid fa-chart-pie text-green"></i> Eficiência e Conversão (%) da Equipe';
 
-if (btnEvolucaoLinhas) {
-    btnEvolucaoLinhas.addEventListener('click', () => {
-        tipoGraficoEvolucao = 'line';
-        atualizarVisualizacoesDashboard();
-    });
-}
+    const taxas = dados.map(d => d.lancadas > 0 ? Math.round((d.efetivadas / d.lancadas) * 100) : 0);
 
-if (selectMes) {
-    selectMes.addEventListener('change', carregarDadosMes);
-}
-
-// Modal Retidos
-if (btnAbrirRetidos) {
-    btnAbrirRetidos.addEventListener('click', () => {
-        if (!tbodyRetidosModal) return;
-        tbodyRetidosModal.innerHTML = '';
-        if (modalRetidosSubtitulo) {
-            modalRetidosSubtitulo.textContent = `${vendasNaoConcluidasMes.length} contratos não concluídos/retidos em ${selectMes.value}`;
+    chartDireitaInstancia = new Chart(ctxDireita, {
+      type: 'bar',
+      data: {
+        labels: nomesLabels.length > 0 ? nomesLabels : ['Sem dados'],
+        datasets: [{
+          label: 'Taxa de Conversão (%)',
+          data: taxas.length > 0 ? taxas : [0],
+          backgroundColor: '#8be9fd',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { ticks: { color: '#6272a4', font: { size: 10 } }, grid: { display: false } },
+          y: { 
+            ticks: { color: '#6272a4', callback: v => v + '%' }, 
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            max: 100
+          }
         }
-
-        if (vendasNaoConcluidasMes.length === 0) {
-            tbodyRetidosModal.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum contrato retido encontrado neste mês.</td></tr>`;
-        } else {
-            vendasNaoConcluidasMes.forEach(v => {
-                const tr = document.createElement('tr');
-                const partes = (v.data || '').split('-');
-                const dataBr = partes.length === 3 ? `${partes[2]}/${partes[1]}` : (v.data || '-');
-
-                tr.innerHTML = `
-                    <td style="color: var(--text-muted); font-size: 0.82rem;">${dataBr}</td>
-                    <td style="font-family: monospace; font-weight: 700;">${v.matricula || '-'}</td>
-                    <td style="font-weight: 600;">${v.clienteNome || 'Cliente'}</td>
-                    <td style="font-weight: 700; color: #38bdf8;">${v.consultorNome || '-'}</td>
-                    <td style="text-align: center;"><span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(245, 158, 11, 0.15); color: #fbbf24;">${v.tipo || 'FILIACAO'}</span></td>
-                    <td style="text-align: center;"><span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(168, 85, 247, 0.15); color: #c084fc;">${v.modalidade || 'OUTRO'}</span></td>
-                `;
-                tbodyRetidosModal.appendChild(tr);
-            });
-        }
-
-        if (modalRetidos) modalRetidos.classList.add('active');
+      }
     });
+  }
 }
 
-if (btnFecharRetidos) {
-    btnFecharRetidos.addEventListener('click', () => modalRetidos && modalRetidos.classList.remove('active'));
+function obterIconePodio(pos) {
+  if (pos === 1) return '🥇 1º';
+  if (pos === 2) return '🥈 2º';
+  if (pos === 3) return '🥉 3º';
+  return `${pos}º`;
 }
 
-if (modalRetidos) {
-    modalRetidos.addEventListener('click', (e) => {
-        if (e.target === modalRetidos) modalRetidos.classList.remove('active');
-    });
-}
+function montarTabela(dados) {
+  const tbody = document.getElementById('corpoComparativo');
+  const txtContagem = document.getElementById('txtContagemComparativo');
+  if (!tbody) return;
 
-// Exportação CSV de Retidos
-if (btnExportarRetidosCsv) {
-    btnExportarRetidosCsv.addEventListener('click', () => {
-        if (vendasNaoConcluidasMes.length === 0) return;
-        let csv = "data:text/csv;charset=utf-8,Data,Matricula,Cliente,Consultor,Tipo,Modalidade,Status\n";
-        vendasNaoConcluidasMes.forEach(d => {
-            csv += `"${d.data}","${d.matricula}","${d.clienteNome}","${d.consultorNome}","${d.tipo}","${d.modalidade}","NAO_CONCLUIDO"\n`;
-        });
-        const link = document.createElement("a");
-        link.href = encodeURI(csv);
-        link.download = `Relatorio_Nao_Concluidos_${selectMes.value}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    });
-}
+  txtContagem.textContent = `Exibindo ${dados.length} consultores em disputa`;
 
-// Exportação Geral Consolidada
-if (btnExportarGeral) {
-    btnExportarGeral.addEventListener('click', async () => {
-        const mesEscolhido = selectMes ? selectMes.value : mesAnoAtual;
-        const qVendas = query(collection(db, "vendas"), where("mesRef", "==", mesEscolhido));
-        const snap = await getDocs(qVendas);
-        
-        if (snap.empty) return;
+  if (dados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 28px;">Nenhum consultor selecionado para confronto.</td></tr>`;
+    return;
+  }
 
-        let csv = "data:text/csv;charset=utf-8,Data,Matricula,Cliente,Consultor,Tipo,Modalidade,Status\n";
-        snap.forEach(doc => {
-            const d = doc.data();
-            csv += `"${d.data}","${d.matricula}","${d.clienteNome}","${d.consultorNome}","${d.tipo}","${d.modalidade}","${d.status}"\n`;
-        });
+  tbody.innerHTML = dados.map((item, idx) => {
+    const taxa = item.lancadas > 0 ? Math.round((item.efetivadas / item.lancadas) * 100) : 0;
+    const nomeCurto = formatarNomeCurto(item.consultor);
 
-        const link = document.createElement("a");
-        link.href = encodeURI(csv);
-        link.download = `Extrato_Geral_Vendas_${mesEscolhido}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    });
+    return `
+      <tr>
+        <td><span class="pill pill-data">${obterIconePodio(idx + 1)}</span></td>
+        <td><span class="pill pill-consultor" title="${item.consultor}">${nomeCurto}</span></td>
+        <td><span class="pill pill-matricula">${item.lancadas}</span></td>
+        <td><span class="pill pill-status-concluido">${item.efetivadas}</span></td>
+        <td><span class="pill pill-status-pendente">${item.pendentes}</span></td>
+        <td><span class="pill pill-status-recusado">${item.recusadas}</span></td>
+        <td><span class="pill pill-tipo-filiacao">${taxa}%</span></td>
+        <td><span class="pill pill-valor">R$ ${item.totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></td>
+      </tr>
+    `;
+  }).join('');
 }
