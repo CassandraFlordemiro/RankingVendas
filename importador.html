@@ -1,112 +1,151 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Central de Importação - Ranking Vendas</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-</head>
-<body class="theme-dracula">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Central de Importação - Ranking Vendas</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  </head>
+  <body class="theme-dracula">
+    <div id="navbar-container"></div>
 
-  <div id="navbar-container"></div>
-
-  <main class="dashboard-container">
-    
-    <!-- Hero do Importador -->
-    <div class="import-hero">
-      <div class="hero-info">
-        <h2><i class="fa-solid fa-cloud-arrow-up text-purple"></i> Central de Carga de Dados</h2>
-        <p>Importe vendas em massa por planilha, audite consultores e gerencie a integridade do banco.</p>
-      </div>
-      <div class="hero-badge">
-        <span class="db-indicator-dot"></span>
-        <span id="txtTotalBancoHero">0 vendas registradas</span>
-      </div>
-    </div>
-
-    <!-- Bloco 1: Origem da Planilha -->
-    <section class="card mt-4">
-      <div class="card-header">
-        <div class="header-title">
-          <i class="fa-solid fa-file-excel text-green"></i>
-          <h2>Origem da Planilha</h2>
+    <main class="dashboard-container">
+      <!-- Hero do Importador -->
+      <div class="import-hero">
+        <div class="hero-info">
+          <h2>
+            <i class="fa-solid fa-cloud-arrow-up text-purple"></i> Central de
+            Carga de Dados
+          </h2>
+          <p>
+            Importe vendas em massa por planilha, audite consultores e gerencie
+            a integridade do banco.
+          </p>
+        </div>
+        <div class="hero-badge">
+          <span class="db-indicator-dot"></span>
+          <span id="txtTotalBancoHero">0 vendas registradas</span>
         </div>
       </div>
 
-      <!-- Área de Drag & Drop de Arquivo -->
-      <div class="upload-dropzone" id="dropzoneArquivo">
-        <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
-        <p class="drop-title">Arraste seu arquivo aqui ou <span class="highlight-link">procure no computador</span></p>
-        <span class="drop-sub">Formatos suportados: .xlsx, .xls ou .csv</span>
-        <input type="file" id="inputArquivoPlanilha" class="hidden-file-input" accept=".xlsx, .xls, .csv" />
-      </div>
-
-      <div id="arquivoSelecionadoChip" class="selected-file-chip" style="display: none;">
-        <i class="fa-solid fa-paperclip"></i>
-        <span id="nomeArquivoSelecionado">arquivo.xlsx</span>
-        <button type="button" class="btn-remove-file" id="btnRemoverArquivo">&times;</button>
-      </div>
-
-      <div class="divider-text"><span>OU COLE O LINK DO GOOGLE SHEETS</span></div>
-
-      <!-- Input de Google Sheets -->
-      <div class="sheets-input-wrapper">
-        <i class="fa-solid fa-table sheets-icon"></i>
-        <input type="url" id="inputGoogleSheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing" />
-      </div>
-      <small class="hint-text"><i class="fa-solid fa-circle-info"></i> A planilha do Sheets deve estar configurada com acesso "Qualquer pessoa com o link".</small>
-
-      <div class="mt-4">
-        <button class="btn btn-primary" id="btnProcessarPlanilha">
-          <i class="fa-solid fa-bolt"></i> Processar e Analisar Planilha
-        </button>
-      </div>
-    </section>
-
-    <!-- Bloco 2: Status do Firestore e Reset -->
-    <section class="card mt-4">
-      <div class="card-header">
-        <div class="header-title">
-          <i class="fa-solid fa-database text-yellow"></i>
-          <h2>Status do Firestore</h2>
-        </div>
-      </div>
-
-      <div class="db-status-banner">
-        <div class="status-metric">
-          <span class="label">Coleção Ativa</span>
-          <h3>vendas</h3>
-        </div>
-        <div class="status-metric">
-          <span class="label">Ticket Padrão (Fallback)</span>
-          <h3>R$ 66,80</h3>
-        </div>
-      </div>
-
-      <!-- Zona de Reset -->
-      <div class="danger-zone">
-        <div class="danger-info">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          <div>
-            <h4>Zona de Reset</h4>
-            <p>Apaga permanentemente todas as vendas da coleção no banco de dados.</p>
+      <!-- Bloco 1: Origem da Planilha -->
+      <section class="card mt-4">
+        <div class="card-header">
+          <div class="header-title">
+            <i class="fa-solid fa-file-excel text-green"></i>
+            <h2>Origem da Planilha</h2>
           </div>
         </div>
-        <button class="btn btn-secondary-sm" id="btnZerarBanco" style="color: var(--danger); border-color: rgba(255,85,85,0.4);">
-          <i class="fa-solid fa-trash-can"></i> Zerar Banco
-        </button>
-      </div>
-    </section>
 
-  </main>
+        <!-- Área de Drag & Drop de Arquivo -->
+        <div class="upload-dropzone" id="dropzoneArquivo">
+          <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+          <p class="drop-title">
+            Arraste seu arquivo aqui ou
+            <span class="highlight-link">procure no computador</span>
+          </p>
+          <span class="drop-sub">Formatos suportados: .xlsx, .xls ou .csv</span>
+          <input
+            type="file"
+            id="inputArquivoPlanilha"
+            class="hidden-file-input"
+            accept=".xlsx, .xls, .csv"
+          />
+        </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="navbar.js"></script>
-  <script src="importador.js"></script>
-</body>
+        <div
+          id="arquivoSelecionadoChip"
+          class="selected-file-chip"
+          style="display: none"
+        >
+          <i class="fa-solid fa-paperclip"></i>
+          <span id="nomeArquivoSelecionado">arquivo.xlsx</span>
+          <button type="button" class="btn-remove-file" id="btnRemoverArquivo">
+            &times;
+          </button>
+        </div>
+
+        <div class="divider-text">
+          <span>OU COLE O LINK DO GOOGLE SHEETS</span>
+        </div>
+
+        <!-- Input de Google Sheets -->
+        <div class="sheets-input-wrapper">
+          <i class="fa-solid fa-table sheets-icon"></i>
+          <input
+            type="url"
+            id="inputGoogleSheetsUrl"
+            placeholder="https://docs.google.com/spreadsheets/d/.../edit?usp=sharing"
+          />
+        </div>
+        <small class="hint-text"
+          ><i class="fa-solid fa-circle-info"></i> A planilha do Sheets deve
+          estar configurada com acesso "Qualquer pessoa com o link".</small
+        >
+
+        <div class="mt-4">
+          <button class="btn btn-primary" id="btnProcessarPlanilha">
+            <i class="fa-solid fa-bolt"></i> Processar e Analisar Planilha
+          </button>
+        </div>
+      </section>
+
+      <!-- Bloco 2: Status do Firestore e Reset -->
+      <section class="card mt-4">
+        <div class="card-header">
+          <div class="header-title">
+            <i class="fa-solid fa-database text-yellow"></i>
+            <h2>Status do Firestore</h2>
+          </div>
+        </div>
+
+        <div class="db-status-banner">
+          <div class="status-metric">
+            <span class="label">Coleção Ativa</span>
+            <h3>vendas</h3>
+          </div>
+          <div class="status-metric">
+            <span class="label">Ticket Padrão (Fallback)</span>
+            <h3>R$ 66,80</h3>
+          </div>
+        </div>
+
+        <!-- Zona de Reset -->
+        <div class="danger-zone">
+          <div class="danger-info">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>
+              <h4>Zona de Reset</h4>
+              <p>
+                Apaga permanentemente todas as vendas da coleção no banco de
+                dados.
+              </p>
+            </div>
+          </div>
+          <button
+            class="btn btn-secondary-sm"
+            id="btnZerarBanco"
+            style="color: var(--danger); border-color: rgba(255, 85, 85, 0.4)"
+          >
+            <i class="fa-solid fa-trash-can"></i> Zerar Banco
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="navbar.js"></script>
+    <script src="importador.js"></script>
+  </body>
 </html>

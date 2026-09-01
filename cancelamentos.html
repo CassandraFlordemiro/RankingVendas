@@ -1,175 +1,208 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vendas Canceladas - Ranking Vendas</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="theme-dracula">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vendas Canceladas - Ranking Vendas</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body class="theme-dracula">
+    <div id="navbar-container"></div>
 
-  <div id="navbar-container"></div>
+    <main class="dashboard-container">
+      <!-- Painel Superior: Cabeçalho e Filtros -->
+      <section class="card">
+        <div class="card-header flex-wrap">
+          <div class="header-title">
+            <i class="fa-solid fa-ban text-danger"></i>
+            <div>
+              <h2>Gestão de Vendas Canceladas e Recusas</h2>
+              <p class="subtitle-text">
+                Audite perdas operacionais, analise gargalos de conversão e
+                reabra contratos para renegociação.
+              </p>
+            </div>
+          </div>
 
-  <main class="dashboard-container">
-    
-    <!-- Painel Superior: Cabeçalho e Filtros -->
-    <section class="card">
-      <div class="card-header flex-wrap">
-        <div class="header-title">
-          <i class="fa-solid fa-ban text-danger"></i>
-          <div>
-            <h2>Gestão de Vendas Canceladas e Recusas</h2>
-            <p class="subtitle-text">Audite perdas operacionais, analise gargalos de conversão e reabra contratos para renegociação.</p>
+          <div class="filters-bar">
+            <div class="control-group-inline">
+              <label for="filtroMesCancelamentos"
+                ><i class="fa-solid fa-calendar-days text-purple"></i>
+                Período:</label
+              >
+              <select id="filtroMesCancelamentos" style="width: 170px">
+                <option value="TODOS">Todo o Período</option>
+                <option value="0">Janeiro</option>
+                <option value="1">Fevereiro</option>
+                <option value="2">Março</option>
+                <option value="3">Abril</option>
+                <option value="4">Maio</option>
+                <option value="5">Junho</option>
+                <option value="6">Julho</option>
+                <option value="7">Agosto</option>
+                <option value="8">Setembro</option>
+                <option value="9">Outubro</option>
+                <option value="10">Novembro</option>
+                <option value="11">Dezembro</option>
+              </select>
+            </div>
+
+            <div class="control-group-inline">
+              <label for="filtroConsultorCancelamentos"
+                ><i class="fa-solid fa-user text-purple"></i> Consultor:</label
+              >
+              <select id="filtroConsultorCancelamentos" style="width: 200px">
+                <option value="TODOS">Todos os Consultores</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="filters-bar">
-          <div class="control-group-inline">
-            <label for="filtroMesCancelamentos"><i class="fa-solid fa-calendar-days text-purple"></i> Período:</label>
-            <select id="filtroMesCancelamentos" style="width: 170px;">
-              <option value="TODOS">Todo o Período</option>
-              <option value="0">Janeiro</option>
-              <option value="1">Fevereiro</option>
-              <option value="2">Março</option>
-              <option value="3">Abril</option>
-              <option value="4">Maio</option>
-              <option value="5">Junho</option>
-              <option value="6">Julho</option>
-              <option value="7">Agosto</option>
-              <option value="8">Setembro</option>
-              <option value="9">Outubro</option>
-              <option value="10">Novembro</option>
-              <option value="11">Dezembro</option>
-            </select>
+        <!-- Top Cards de Impacto Financeiro e Operacional -->
+        <div class="top-stats-row mt-3">
+          <div class="stat-box stat-highlight-red">
+            <span class="stat-label">Total Canceladas</span>
+            <h3 id="cardTotalCanceladas">0</h3>
+            <small class="stat-sub">contratos abortados</small>
           </div>
 
-          <div class="control-group-inline">
-            <label for="filtroConsultorCancelamentos"><i class="fa-solid fa-user text-purple"></i> Consultor:</label>
-            <select id="filtroConsultorCancelamentos" style="width: 200px;">
-              <option value="TODOS">Todos os Consultores</option>
-            </select>
+          <div class="stat-box">
+            <span class="stat-label">Receita Não Realizada</span>
+            <h3 id="cardReceitaPerdida" class="text-danger">R$ 0,00</h3>
+            <small class="stat-sub">faturamento perdido</small>
+          </div>
+
+          <div class="stat-box">
+            <span class="stat-label">Taxa de Cancelamento</span>
+            <h3 id="cardTaxaCancelamento">0%</h3>
+            <small class="stat-sub">do volume lançado</small>
+          </div>
+
+          <div class="stat-box stat-highlight-purple">
+            <span class="stat-label">Modalidade Mais Afetada</span>
+            <h3 id="cardModalidadeCritica">--</h3>
+            <small class="stat-sub" id="cardModalidadeCriticaQtd"
+              >0 ocorrências</small
+            >
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Top Cards de Impacto Financeiro e Operacional -->
-      <div class="top-stats-row mt-3">
-        <div class="stat-box stat-highlight-red">
-          <span class="stat-label">Total Canceladas</span>
-          <h3 id="cardTotalCanceladas">0</h3>
-          <small class="stat-sub">contratos abortados</small>
-        </div>
-
-        <div class="stat-box">
-          <span class="stat-label">Receita Não Realizada</span>
-          <h3 id="cardReceitaPerdida" class="text-danger">R$ 0,00</h3>
-          <small class="stat-sub">faturamento perdido</small>
-        </div>
-
-        <div class="stat-box">
-          <span class="stat-label">Taxa de Cancelamento</span>
-          <h3 id="cardTaxaCancelamento">0%</h3>
-          <small class="stat-sub">do volume lançado</small>
-        </div>
-
-        <div class="stat-box stat-highlight-purple">
-          <span class="stat-label">Modalidade Mais Afetada</span>
-          <h3 id="cardModalidadeCritica">--</h3>
-          <small class="stat-sub" id="cardModalidadeCriticaQtd">0 ocorrências</small>
-        </div>
-      </div>
-    </section>
-
-    <!-- Gráficos de Auditoria de Cancelamento -->
-    <div class="grid-two-charts mt-3">
-      
-      <!-- Gráfico 1: Vendas Canceladas por Consultor -->
-      <div class="card chart-panel">
-        <div class="chart-panel-header">
-          <h4><i class="fa-solid fa-user-xmark text-danger"></i> Cancelamentos por Consultor</h4>
-        </div>
-        <div class="chart-canvas-container">
-          <canvas id="graficoCanceladosConsultor"></canvas>
-        </div>
-      </div>
-
-      <!-- Gráfico 2: Formas de Pagamento dos Cancelados -->
-      <div class="card chart-panel">
-        <div class="chart-panel-header">
-          <h4><i class="fa-solid fa-wallet text-yellow"></i> Meios de Pagamento Recusados</h4>
-        </div>
-        <div class="chart-canvas-container">
-          <canvas id="graficoCanceladosPagamento"></canvas>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Tabela de Histórico de Cancelamentos (10 Registros Iniciais) -->
-    <section class="card mt-4">
-      <div class="card-header flex-wrap">
-        <div class="header-title">
-          <i class="fa-solid fa-clock-rotate-left text-yellow"></i>
-          <div>
-            <h2>Contratos Não Concluídos no Pós-Venda</h2>
-            <span class="subtitle-text" id="txtContagemCancelados">Exibindo 0 de 0 contratos</span>
+      <!-- Gráficos de Auditoria de Cancelamento -->
+      <div class="grid-two-charts mt-3">
+        <!-- Gráfico 1: Vendas Canceladas por Consultor -->
+        <div class="card chart-panel">
+          <div class="chart-panel-header">
+            <h4>
+              <i class="fa-solid fa-user-xmark text-danger"></i> Cancelamentos
+              por Consultor
+            </h4>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="graficoCanceladosConsultor"></canvas>
           </div>
         </div>
 
-        <div class="filters-bar">
-          <div class="search-input-wrapper">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="buscaCancelamentosInput" placeholder="Buscar por cliente, matrícula ou consultor..." class="compact-search-input" />
+        <!-- Gráfico 2: Formas de Pagamento dos Cancelados -->
+        <div class="card chart-panel">
+          <div class="chart-panel-header">
+            <h4>
+              <i class="fa-solid fa-wallet text-yellow"></i> Meios de Pagamento
+              Recusados
+            </h4>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="graficoCanceladosPagamento"></canvas>
           </div>
         </div>
       </div>
 
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Matrícula</th>
-              <th>Cliente</th>
-              <th>Data</th>
-              <th>Consultor</th>
-              <th>Tipo</th>
-              <th>Pagamento</th>
-              <th>Observação do Pós</th>
-              <th>Status</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="corpoCancelamentos">
-            <tr><td colspan="9" class="loading">Carregando dados...</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <!-- Tabela de Histórico de Cancelamentos (10 Registros Iniciais) -->
+      <section class="card mt-4">
+        <div class="card-header flex-wrap">
+          <div class="header-title">
+            <i class="fa-solid fa-clock-rotate-left text-yellow"></i>
+            <div>
+              <h2>Contratos Não Concluídos no Pós-Venda</h2>
+              <span class="subtitle-text" id="txtContagemCancelados"
+                >Exibindo 0 de 0 contratos</span
+              >
+            </div>
+          </div>
 
-      <!-- Paginação de 10 em 10 -->
-      <div class="pagination-footer mt-4">
-        <button class="btn btn-secondary-sm" id="btnRecolher10" style="display: none;">
-          <i class="fa-solid fa-compress"></i> Recolher p/ 10
-        </button>
-        <div class="pagination-actions">
-          <button class="btn btn-primary btn-sm" id="btnMostrarMais10">
-            <i class="fa-solid fa-plus"></i> Mostrar Mais 10
+          <div class="filters-bar">
+            <div class="search-input-wrapper">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input
+                type="text"
+                id="buscaCancelamentosInput"
+                placeholder="Buscar por cliente, matrícula ou consultor..."
+                class="compact-search-input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Matrícula</th>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Consultor</th>
+                <th>Tipo</th>
+                <th>Pagamento</th>
+                <th>Observação do Pós</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="corpoCancelamentos">
+              <tr>
+                <td colspan="9" class="loading">Carregando dados...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginação de 10 em 10 -->
+        <div class="pagination-footer mt-4">
+          <button
+            class="btn btn-secondary-sm"
+            id="btnRecolher10"
+            style="display: none"
+          >
+            <i class="fa-solid fa-compress"></i> Recolher p/ 10
           </button>
-          <button class="btn btn-secondary-sm" id="btnMostrarTodos">
-            <i class="fa-solid fa-angles-down"></i> Mostrar Todos (<span id="txtQtdTotalBtn">0</span>)
-          </button>
+          <div class="pagination-actions">
+            <button class="btn btn-primary btn-sm" id="btnMostrarMais10">
+              <i class="fa-solid fa-plus"></i> Mostrar Mais 10
+            </button>
+            <button class="btn btn-secondary-sm" id="btnMostrarTodos">
+              <i class="fa-solid fa-angles-down"></i> Mostrar Todos (<span
+                id="txtQtdTotalBtn"
+                >0</span
+              >)
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </main>
 
-  </main>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="navbar.js"></script>
-  <script src="cancelamentos.js"></script>
-</body>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="navbar.js"></script>
+    <script src="cancelamentos.js"></script>
+  </body>
 </html>

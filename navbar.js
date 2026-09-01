@@ -2,25 +2,25 @@
  * Componente Mestre de Navegação, Temas Globais e Modal de Vendas
  */
 
-window.formatarNomeCurto = function(nome) {
-  if (!nome || typeof nome !== 'string') return 'NÃO INFORMADO';
-  const limpo = nome.trim().replace(/\s+/g, ' ');
-  
+window.formatarNomeCurto = function (nome) {
+  if (!nome || typeof nome !== "string") return "NÃO INFORMADO";
+  const limpo = nome.trim().replace(/\s+/g, " ");
+
   if (
-    limpo.startsWith('VENDA EXTERNA') ||
-    limpo.includes('SITE') ||
-    limpo === 'NÃO INFORMADO' ||
-    limpo === 'S/N' ||
-    limpo === 'Geral da Equipe' ||
-    limpo === 'Visão Geral da Equipe'
+    limpo.startsWith("VENDA EXTERNA") ||
+    limpo.includes("SITE") ||
+    limpo === "NÃO INFORMADO" ||
+    limpo === "S/N" ||
+    limpo === "Geral da Equipe" ||
+    limpo === "Visão Geral da Equipe"
   ) {
     return limpo;
   }
 
-  const partes = limpo.split(' ');
+  const partes = limpo.split(" ");
   if (partes.length <= 2) return limpo;
 
-  const conectores = ['DE', 'DA', 'DO', 'DOS', 'DAS', 'E'];
+  const conectores = ["DE", "DA", "DO", "DOS", "DAS", "E"];
   if (conectores.includes(partes[1].toUpperCase()) && partes[2]) {
     return `${partes[0]} ${partes[1]} ${partes[2]}`;
   }
@@ -28,17 +28,17 @@ window.formatarNomeCurto = function(nome) {
   return `${partes[0]} ${partes[1]}`;
 };
 
-window.aplicarTema = function(tema) {
+window.aplicarTema = function (tema) {
   document.body.className = `theme-${tema}`;
-  localStorage.setItem('ranking_theme_selected', tema);
-  const select = document.getElementById('seletorTemaGlobal');
+  localStorage.setItem("ranking_theme_selected", tema);
+  const select = document.getElementById("seletorTemaGlobal");
   if (select && select.value !== tema) {
     select.value = tema;
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  const temaSalvo = localStorage.getItem('ranking_theme_selected') || 'dracula';
+document.addEventListener("DOMContentLoaded", () => {
+  const temaSalvo = localStorage.getItem("ranking_theme_selected") || "dracula";
   window.aplicarTema(temaSalvo);
 
   renderizarNavbarGlobal();
@@ -46,26 +46,33 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderizarNavbarGlobal() {
-  const container = document.getElementById('navbar-container');
+  const container = document.getElementById("navbar-container");
   if (!container) return;
 
-  const caminhoAtual = window.location.pathname.split('/').pop() || 'index.html';
-  const temaAtual = localStorage.getItem('ranking_theme_selected') || 'dracula';
+  const caminhoAtual =
+    window.location.pathname.split("/").pop() || "index.html";
+  const temaAtual = localStorage.getItem("ranking_theme_selected") || "dracula";
 
   const rotas = [
-    { href: 'index.html', label: 'Rankings', icon: 'fa-trophy' },
-    { href: 'posvenda.html', label: 'Pós-Venda (Lavínia)', icon: 'fa-headset' },
-    { href: 'desempenho.html', label: 'Desempenho', icon: 'fa-chart-pie' },
-    { href: 'comparativo.html', label: 'Comparativo', icon: 'fa-users-viewfinder' },
-    { href: 'cancelamentos.html', label: 'Vendas Canceladas', icon: 'fa-ban' },
-    { href: 'importador.html', label: 'Importador', icon: 'fa-cloud-arrow-up' },
-    { href: 'admin.html', label: 'Consultores', icon: 'fa-user-gear' }
+    { href: "index.html", label: "Rankings", icon: "fa-trophy" },
+    { href: "posvenda.html", label: "Pós-Venda (Lavínia)", icon: "fa-headset" },
+    { href: "desempenho.html", label: "Desempenho", icon: "fa-chart-pie" },
+    {
+      href: "comparativo.html",
+      label: "Comparativo",
+      icon: "fa-users-viewfinder",
+    },
+    { href: "cancelamentos.html", label: "Vendas Canceladas", icon: "fa-ban" },
+    { href: "importador.html", label: "Importador", icon: "fa-cloud-arrow-up" },
+    { href: "admin.html", label: "Consultores", icon: "fa-user-gear" },
   ];
 
-  const linksHtml = rotas.map(r => {
-    const isActive = caminhoAtual === r.href ? 'active' : '';
-    return `<a href="${r.href}" class="nav-link ${isActive}"><i class="fa-solid ${r.icon}"></i> ${r.label}</a>`;
-  }).join('');
+  const linksHtml = rotas
+    .map((r) => {
+      const isActive = caminhoAtual === r.href ? "active" : "";
+      return `<a href="${r.href}" class="nav-link ${isActive}"><i class="fa-solid ${r.icon}"></i> ${r.label}</a>`;
+    })
+    .join("");
 
   container.innerHTML = `
     <header class="main-header">
@@ -84,10 +91,10 @@ function renderizarNavbarGlobal() {
           <div class="theme-selector-wrap">
             <i class="fa-solid fa-palette text-muted"></i>
             <select id="seletorTemaGlobal" onchange="aplicarTema(this.value)">
-              <option value="dracula" ${temaAtual === 'dracula' ? 'selected' : ''}>Dracula Dark</option>
-              <option value="midnight" ${temaAtual === 'midnight' ? 'selected' : ''}>Midnight Blue</option>
-              <option value="cyberpunk" ${temaAtual === 'cyberpunk' ? 'selected' : ''}>Cyberpunk Neon</option>
-              <option value="light" ${temaAtual === 'light' ? 'selected' : ''}>Light Clean</option>
+              <option value="dracula" ${temaAtual === "dracula" ? "selected" : ""}>Dracula Dark</option>
+              <option value="midnight" ${temaAtual === "midnight" ? "selected" : ""}>Midnight Blue</option>
+              <option value="cyberpunk" ${temaAtual === "cyberpunk" ? "selected" : ""}>Cyberpunk Neon</option>
+              <option value="light" ${temaAtual === "light" ? "selected" : ""}>Light Clean</option>
             </select>
           </div>
 
@@ -182,36 +189,38 @@ function renderizarNavbarGlobal() {
 }
 
 function configurarModalGlobal() {
-  const modal = document.getElementById('modalVendaOverlayGlobal');
-  const btnAbrir = document.getElementById('btnAbrirModalVendaGlobal');
-  const btnFechar = document.getElementById('btnFecharModalGlobal');
-  const btnCancelar = document.getElementById('btnCancelarModalGlobal');
-  const form = document.getElementById('formNovaVendaGlobal');
-  const selectConsultor = document.getElementById('consultorSelectGlobal');
-  const grupoManual = document.getElementById('grupoConsultorManualGlobal');
-  const inputManual = document.getElementById('consultorManualInputGlobal');
+  const modal = document.getElementById("modalVendaOverlayGlobal");
+  const btnAbrir = document.getElementById("btnAbrirModalVendaGlobal");
+  const btnFechar = document.getElementById("btnFecharModalGlobal");
+  const btnCancelar = document.getElementById("btnCancelarModalGlobal");
+  const form = document.getElementById("formNovaVendaGlobal");
+  const selectConsultor = document.getElementById("consultorSelectGlobal");
+  const grupoManual = document.getElementById("grupoConsultorManualGlobal");
+  const inputManual = document.getElementById("consultorManualInputGlobal");
 
   if (!modal || !btnAbrir || !form) return;
 
   selectConsultor.onchange = () => {
-    if (selectConsultor.value === 'OUTRO') {
-      grupoManual.style.display = 'block';
+    if (selectConsultor.value === "OUTRO") {
+      grupoManual.style.display = "block";
       inputManual.required = true;
       inputManual.focus();
     } else {
-      grupoManual.style.display = 'none';
+      grupoManual.style.display = "none";
       inputManual.required = false;
     }
   };
 
-  btnAbrir.onclick = () => { modal.style.display = 'flex'; };
-  const fechar = () => { 
-    modal.style.display = 'none'; 
-    form.reset(); 
-    grupoManual.style.display = 'none';
-    document.getElementById('valorInputGlobal').value = '66.80';
+  btnAbrir.onclick = () => {
+    modal.style.display = "flex";
   };
-  
+  const fechar = () => {
+    modal.style.display = "none";
+    form.reset();
+    grupoManual.style.display = "none";
+    document.getElementById("valorInputGlobal").value = "66.80";
+  };
+
   if (btnFechar) btnFechar.onclick = fechar;
   if (btnCancelar) btnCancelar.onclick = fechar;
 
@@ -219,33 +228,41 @@ function configurarModalGlobal() {
     e.preventDefault();
 
     let consultorFinal = selectConsultor.value;
-    if (consultorFinal === 'OUTRO') {
+    if (consultorFinal === "OUTRO") {
       consultorFinal = inputManual.value.trim().toUpperCase();
     }
 
     const novaVenda = {
       consultor: consultorFinal,
-      cliente: document.getElementById('clienteInputGlobal').value.trim().toUpperCase(),
-      matricula: document.getElementById('matriculaInputGlobal').value.trim().toUpperCase(),
-      tipoVenda: document.getElementById('tipoVendaSelectGlobal').value,
-      formaPagamento: document.getElementById('formaPagamentoSelectGlobal').value,
-      valor: parseFloat(document.getElementById('valorInputGlobal').value) || 66.80,
+      cliente: document
+        .getElementById("clienteInputGlobal")
+        .value.trim()
+        .toUpperCase(),
+      matricula: document
+        .getElementById("matriculaInputGlobal")
+        .value.trim()
+        .toUpperCase(),
+      tipoVenda: document.getElementById("tipoVendaSelectGlobal").value,
+      formaPagamento: document.getElementById("formaPagamentoSelectGlobal")
+        .value,
+      valor:
+        parseFloat(document.getElementById("valorInputGlobal").value) || 66.8,
       dataVenda: firebase.firestore.FieldValue.serverTimestamp(),
-      status: 'PENDENTE',
-      observacao: '',
+      status: "PENDENTE",
+      observacao: "",
       etapasPosVenda: {
         ligacao: false,
         linkEnviado: false,
-        docsRecebidos: false
-      }
+        docsRecebidos: false,
+      },
     };
 
     try {
       const db = firebase.firestore();
-      await db.collection('vendas').add(novaVenda);
+      await db.collection("vendas").add(novaVenda);
       fechar();
     } catch (err) {
-      alert('Erro ao registrar venda: ' + err.message);
+      alert("Erro ao registrar venda: " + err.message);
     }
   };
 }

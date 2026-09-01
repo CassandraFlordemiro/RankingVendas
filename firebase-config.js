@@ -1,15 +1,38 @@
-// Configuração Oficial do Firebase para o RankingVendas
+/**
+ * Configuração e Inicialização do Firebase com Cache Persistente Local
+ */
+
+// Insira ou mantenha as credenciais do seu projeto Firebase abaixo
 const firebaseConfig = {
-  apiKey: "AIzaSyDgtHlqlv4meTjW4VyJ8HrVCfUqMHaoUp0",
+  apiKey: "SUA_API_KEY",
   authDomain: "rankingvendas-d56da.firebaseapp.com",
   projectId: "rankingvendas-d56da",
-  storageBucket: "rankingvendas-d56da.firebasestorage.app",
-  messagingSenderId: "55208086303",
-  appId: "1:55208086303:web:fd78e3481750c04acf3e2a",
-  measurementId: "G-N74FZT7QY2"
+  storageBucket: "rankingvendas-d56da.appspot.com",
+  messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+  appId: "SEU_APP_ID"
 };
 
-// Inicializa a aplicação se ainda não estiver ativa
+// Inicializa o Firebase apenas se não houver instância ativa
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
+
+// Inicializa a instância do Firestore
+const firestoreDb = firebase.firestore();
+
+// Ativa o cache local persistente com sincronização entre múltiplas abas
+firestoreDb.enablePersistence({ synchronizeTabs: true })
+  .then(() => {
+    console.log("Cache offline e persistência do Firestore ativados com sucesso.");
+  })
+  .catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Múltiplas abas abertas simultaneamente durante a ativação inicial
+      console.warn("Aviso: Múltiplas abas abertas. A persistência operará na aba principal.");
+    } else if (err.code === 'unimplemented') {
+      // Navegador sem suporte a IndexedDB
+      console.warn("Aviso: O navegador atual não suporta armazenamento local persistente.");
+    } else {
+      console.error("Erro ao ativar persistência do Firestore:", err);
+    }
+  });

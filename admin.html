@@ -1,102 +1,225 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gestão de Consultores - Ranking Vendas</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-</head>
-<body class="theme-dracula">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestão de Consultores e Metas - Ranking Vendas</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="theme-dracula">
+    <div id="navbar-container"></div>
 
-  <div id="navbar-container"></div>
-
-  <main class="dashboard-container">
-    
-    <div class="card">
-      <div class="card-header flex-wrap">
-        <div class="header-title">
-          <i class="fa-solid fa-users-gear text-purple"></i>
-          <div>
-            <h2>Gestão de Consultores e Fotos</h2>
-            <p class="subtitle-text">Cadastre novos vendedores, altere fotos de perfil e ative/inative consultores na plataforma.</p>
-          </div>
-        </div>
-
-        <div class="filters-bar">
-          <div class="search-input-wrapper">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="buscaConsultoresInput" placeholder="Buscar consultor..." class="compact-search-input" />
-          </div>
-          <button class="btn btn-primary" id="btnNovoConsultor">
-            <i class="fa-solid fa-user-plus"></i> Novo Consultor
-          </button>
-        </div>
-      </div>
-
-      <!-- Grid de Cards de Gestão dos Consultores -->
-      <div id="gridConsultoresAdmin" class="admin-consultants-grid mt-4">
-        <div class="loading">Carregando consultores...</div>
-      </div>
-    </div>
-
-    <!-- Modal de Cadastro / Edição de Consultor -->
-    <div class="modal-overlay" id="modalConsultorAdmin">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3 id="modalConsultorTitulo"><i class="fa-solid fa-user-pen"></i> Editar Consultor</h3>
-          <button class="btn-close" id="btnFecharModalConsultor">&times;</button>
-        </div>
-        <form id="formConsultorAdmin">
-          <input type="hidden" id="consultorIdAdmin" />
-
-          <div class="avatar-upload-preview">
-            <div class="avatar-circle-big" id="avatarPreviewBig">
-              <span id="txtIniciaisPreview">--</span>
-              <img id="imgAvatarPreview" src="" alt="" style="display: none;" />
-            </div>
-            <div class="avatar-upload-actions">
-              <label for="inputFotoArquivo" class="btn btn-secondary-sm">
-                <i class="fa-solid fa-camera"></i> Carregar Foto
-              </label>
-              <input type="file" id="inputFotoArquivo" accept="image/*" style="display: none;" />
-              <button type="button" class="btn btn-secondary-sm text-danger" id="btnRemoverFoto" style="display: none;">Remover</button>
+    <main class="dashboard-container">
+      <!-- Seção 1: Painel de Metas Mês a Mês -->
+      <section class="card mb-4">
+        <div class="card-header flex-wrap">
+          <div class="header-title">
+            <i class="fa-solid fa-bullseye text-green"></i>
+            <div>
+              <h2>Configuração de Metas Mensais</h2>
+              <p class="subtitle-text">
+                Defina metas de faturamento (R$) e volume de contratos para a
+                equipe e por consultor.
+              </p>
             </div>
           </div>
 
-          <div class="form-group mt-3">
-            <label for="inputNomeConsultorAdmin">Nome Completo *</label>
-            <input type="text" id="inputNomeConsultorAdmin" required placeholder="Ex: ALEXANDRA GUERREIRO" />
+          <div class="filters-bar">
+            <div class="control-group-inline">
+              <label for="selectMesMetasAdmin"
+                ><i class="fa-solid fa-calendar-days text-purple"></i>
+                Mês:</label
+              >
+              <select id="selectMesMetasAdmin" style="width: 160px">
+                <option value="0">Janeiro</option>
+                <option value="1">Fevereiro</option>
+                <option value="2">Março</option>
+                <option value="3">Abril</option>
+                <option value="4">Maio</option>
+                <option value="5">Junho</option>
+                <option value="6">Julho</option>
+                <option value="7">Agosto</option>
+                <option value="8">Setembro</option>
+                <option value="9">Outubro</option>
+                <option value="10">Novembro</option>
+                <option value="11">Dezembro</option>
+              </select>
+            </div>
+
+            <div class="control-group-inline">
+              <label for="selectAnoMetasAdmin"
+                ><i class="fa-solid fa-calendar text-purple"></i> Ano:</label
+              >
+              <select id="selectAnoMetasAdmin" style="width: 110px">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2027">2027</option>
+              </select>
+            </div>
+
+            <button class="btn btn-success" id="btnSalvarTodasMetas">
+              <i class="fa-solid fa-floppy-disk"></i> Salvar Metas do Mês
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabela de Atribuição de Metas -->
+        <div class="table-container mt-3">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Consultor / Escopo</th>
+                <th>Status</th>
+                <th style="width: 250px">Meta Faturamento (R$)</th>
+                <th style="width: 220px">Meta Contratos (Qtd)</th>
+                <th class="text-center">Ações Rápidas</th>
+              </tr>
+            </thead>
+            <tbody id="corpoTabelaMetasAdmin">
+              <tr>
+                <td colspan="5" class="loading">Carregando metas...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Seção 2: Gestão de Consultores e Fotos -->
+      <section class="card">
+        <div class="card-header flex-wrap">
+          <div class="header-title">
+            <i class="fa-solid fa-users-gear text-purple"></i>
+            <div>
+              <h2>Gestão de Consultores e Fotos</h2>
+              <p class="subtitle-text">
+                Cadastre novos vendedores, altere fotos de perfil e gerencie a
+                equipe ativa.
+              </p>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="inputFotoUrlAdmin">URL da Imagem (Opcional)</label>
-            <input type="url" id="inputFotoUrlAdmin" placeholder="https://exemplo.com/foto.jpg" />
+          <div class="filters-bar">
+            <div class="search-input-wrapper">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input
+                type="text"
+                id="buscaConsultoresInput"
+                placeholder="Buscar consultor..."
+                class="compact-search-input"
+              />
+            </div>
+            <button class="btn btn-primary" id="btnNovoConsultor">
+              <i class="fa-solid fa-user-plus"></i> Novo Consultor
+            </button>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label for="selectStatusConsultorAdmin">Status na Operação</label>
-            <select id="selectStatusConsultorAdmin">
-              <option value="ativo">Ativo (Exibido nos rankings)</option>
-              <option value="inativo">Inativo (Oculto)</option>
-            </select>
-          </div>
+        <div id="gridConsultoresAdmin" class="admin-consultants-grid mt-4">
+          <div class="loading">Carregando consultores...</div>
+        </div>
+      </section>
 
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary-sm" id="btnCancelarModalConsultor">Cancelar</button>
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Alterações</button>
+      <!-- Modal de Cadastro / Edição de Consultor -->
+      <div class="modal-overlay" id="modalConsultorAdmin">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3 id="modalConsultorTitulo">
+              <i class="fa-solid fa-user-pen"></i> Editar Consultor
+            </h3>
+            <button class="btn-close" id="btnFecharModalConsultor">
+              &times;
+            </button>
           </div>
-        </form>
+          <form id="formConsultorAdmin">
+            <input type="hidden" id="consultorIdAdmin" />
+
+            <div class="avatar-upload-preview">
+              <div class="avatar-circle-big" id="avatarPreviewBig">
+                <span id="txtIniciaisPreview">--</span>
+                <img
+                  id="imgAvatarPreview"
+                  src=""
+                  alt=""
+                  style="display: none"
+                />
+              </div>
+              <div class="avatar-upload-actions">
+                <label for="inputFotoArquivo" class="btn btn-secondary-sm">
+                  <i class="fa-solid fa-camera"></i> Carregar Foto
+                </label>
+                <input
+                  type="file"
+                  id="inputFotoArquivo"
+                  accept="image/*"
+                  style="display: none"
+                />
+                <button
+                  type="button"
+                  class="btn btn-secondary-sm text-danger"
+                  id="btnRemoverFoto"
+                  style="display: none"
+                >
+                  Remover
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <label for="inputNomeConsultorAdmin">Nome Completo *</label>
+              <input
+                type="text"
+                id="inputNomeConsultorAdmin"
+                required
+                placeholder="Ex: ALEXANDRA GUERREIRO"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="inputFotoUrlAdmin">URL da Imagem (Opcional)</label>
+              <input
+                type="url"
+                id="inputFotoUrlAdmin"
+                placeholder="https://exemplo.com/foto.jpg"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="selectStatusConsultorAdmin">Status na Operação</label>
+              <select id="selectStatusConsultorAdmin">
+                <option value="ativo">Ativo (Exibido nos rankings)</option>
+                <option value="inativo">Inativo (Oculto)</option>
+              </select>
+            </div>
+
+            <div class="modal-actions">
+              <button
+                type="button"
+                class="btn btn-secondary-sm"
+                id="btnCancelarModalConsultor"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-check"></i> Salvar Alterações
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </main>
 
-  </main>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="navbar.js"></script>
-  <script src="admin.js"></script>
-</body>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="navbar.js"></script>
+    <script src="admin.js"></script>
+  </body>
 </html>

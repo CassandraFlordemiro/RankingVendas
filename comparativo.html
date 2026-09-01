@@ -1,154 +1,263 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Comparativo da Equipe - Ranking Vendas</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="theme-dracula">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comparativo da Equipe - Ranking Vendas</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body class="theme-dracula">
+    <div id="navbar-container"></div>
 
-  <div id="navbar-container"></div>
+    <main class="dashboard-container">
+      <!-- Painel de Seleção e Carrossel dos Consultores -->
+      <section class="card">
+        <div class="card-header flex-wrap">
+          <div class="header-title">
+            <i class="fa-solid fa-users-viewfinder text-purple"></i>
+            <div>
+              <h2>Arena de Comparação da Equipe</h2>
+              <p class="subtitle-text">
+                Selecione os consultores para colocar o desempenho à prova no
+                mano a mano ou em grupo.
+              </p>
+            </div>
+          </div>
 
-  <main class="dashboard-container">
-    
-    <!-- Painel Superior: Cabeçalho, Filtro e Carrossel de Cards dos Consultores -->
-    <section class="card">
-      <div class="card-header flex-wrap">
-        <div class="header-title">
-          <i class="fa-solid fa-users-viewfinder text-purple"></i>
-          <div>
-            <h2>Arena de Comparação da Equipe</h2>
-            <p class="subtitle-text">Selecione os consultores para colocar o desempenho à prova no mano a mano ou em grupo.</p>
+          <div class="filters-bar">
+            <div class="control-group-inline">
+              <label for="filtroMesComparativo"
+                ><i class="fa-solid fa-calendar-days text-purple"></i>
+                Período:</label
+              >
+              <select id="filtroMesComparativo" style="width: 170px">
+                <option value="TODOS">Todo o Período</option>
+                <option value="0">Janeiro</option>
+                <option value="1">Fevereiro</option>
+                <option value="2">Março</option>
+                <option value="3">Abril</option>
+                <option value="4">Maio</option>
+                <option value="5">Junho</option>
+                <option value="6">Julho</option>
+                <option value="7">Agosto</option>
+                <option value="8">Setembro</option>
+                <option value="9">Outubro</option>
+                <option value="10">Novembro</option>
+                <option value="11">Dezembro</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary-sm" id="btnCompararTop3">
+              <i class="fa-solid fa-trophy text-yellow"></i> Top 3
+            </button>
+            <button class="btn btn-secondary-sm" id="btnCompararTodos">
+              <i class="fa-solid fa-users"></i> Todos
+            </button>
+            <button class="btn btn-secondary-sm" id="btnLimparSelecao">
+              <i class="fa-solid fa-eraser"></i> Limpar
+            </button>
           </div>
         </div>
 
-        <div class="filters-bar">
-          <div class="control-group-inline">
-            <label for="filtroMesComparativo"><i class="fa-solid fa-calendar-days text-purple"></i> Período:</label>
-            <select id="filtroMesComparativo" style="width: 170px;">
-              <option value="TODOS">Todo o Período</option>
-              <option value="0">Janeiro</option>
-              <option value="1">Fevereiro</option>
-              <option value="2">Março</option>
-              <option value="3">Abril</option>
-              <option value="4">Maio</option>
-              <option value="5">Junho</option>
-              <option value="6">Julho</option>
-              <option value="7">Agosto</option>
-              <option value="8">Setembro</option>
-              <option value="9">Outubro</option>
-              <option value="10">Novembro</option>
-              <option value="11">Dezembro</option>
-            </select>
+        <div class="consultants-carousel-container">
+          <div class="carousel-header">
+            <span class="selection-label"
+              >Consultores em Disputa (clique para selecionar):</span
+            >
+            <span class="carousel-hint"
+              ><i class="fa-solid fa-arrows-left-right"></i> Arraste para o
+              lado</span
+            >
           </div>
-          <button class="btn btn-secondary-sm" id="btnCompararTop3"><i class="fa-solid fa-trophy text-yellow"></i> Top 3</button>
-          <button class="btn btn-secondary-sm" id="btnCompararTodos"><i class="fa-solid fa-users"></i> Todos</button>
-          <button class="btn btn-secondary-sm" id="btnLimparSelecao"><i class="fa-solid fa-eraser"></i> Limpar</button>
+          <div
+            id="cardsConsultoresComparativo"
+            class="consultants-cards-scroll"
+          ></div>
+        </div>
+      </section>
+
+      <!-- Barra de Metas da Disputa Atual -->
+      <div class="goals-dual-grid mt-3">
+        <section class="card goal-card">
+          <div class="goal-header">
+            <div class="goal-title-area">
+              <i class="fa-solid fa-sack-dollar text-purple"></i>
+              <div>
+                <h4>Meta Financeira dos Selecionados</h4>
+                <span class="subtitle-text" id="txtSubMetaComparativoFat"
+                  >Progresso conjunto do grupo em disputa</span
+                >
+              </div>
+            </div>
+            <div class="goal-values">
+              <strong id="txtValorAtualMetaComparativo" class="text-green"
+                >R$ 0,00</strong
+              >
+              <span class="goal-divider">/</span>
+              <span id="txtValorObjetivoMetaComparativo" class="text-muted"
+                >R$ 0,00</span
+              >
+              <span class="badge badge-month" id="txtPercentualMetaComparativo"
+                >0%</span
+              >
+            </div>
+          </div>
+          <div class="progress-bar-container">
+            <div
+              class="progress-bar-fill fill-purple"
+              id="barraProgressoMetaComparativo"
+              style="width: 0%"
+            >
+              <span class="progress-shine"></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card goal-card">
+          <div class="goal-header">
+            <div class="goal-title-area">
+              <i class="fa-solid fa-bullseye text-green"></i>
+              <div>
+                <h4>Meta em Contratos dos Selecionados</h4>
+                <span class="subtitle-text" id="txtSubMetaComparativoQtd"
+                  >Progresso em volume do grupo</span
+                >
+              </div>
+            </div>
+            <div class="goal-values">
+              <strong id="txtQtdAtualMetaComparativo" class="text-green"
+                >0</strong
+              >
+              <span class="goal-divider">/</span>
+              <span id="txtQtdObjetivoMetaComparativo" class="text-muted"
+                >0 vendas</span
+              >
+              <span
+                class="badge badge-date"
+                id="txtPercentualMetaComparativoQtd"
+                >0%</span
+              >
+            </div>
+          </div>
+          <div class="progress-bar-container">
+            <div
+              class="progress-bar-fill fill-green"
+              id="barraProgressoMetaComparativoQtd"
+              style="width: 0%"
+            >
+              <span class="progress-shine"></span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Cards de Destaque da Disputa -->
+      <div class="top-stats-row mt-3">
+        <div class="stat-box stat-highlight-green">
+          <span class="stat-label">Líder em Vendas</span>
+          <h3 id="cardLiderVendas">--</h3>
+          <small class="stat-sub" id="cardLiderVendasQtd"
+            >0 vendas efetivadas</small
+          >
+        </div>
+        <div class="stat-box stat-highlight-purple">
+          <span class="stat-label">Melhor Conversão</span>
+          <h3 id="cardLiderConversao">--</h3>
+          <small class="stat-sub" id="cardLiderConversaoTaxa"
+            >0% de efetivação</small
+          >
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Volume Efetivado do Grupo</span>
+          <h3 id="cardTotalGrupoEfetivadas">0</h3>
+          <small class="stat-sub" id="cardTotalGrupoLancadas"
+            >de 0 lançadas</small
+          >
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Receita Gerada pelo Grupo</span>
+          <h3 id="cardReceitaGrupo">R$ 0,00</h3>
+          <small class="stat-sub">em contratos ativos</small>
         </div>
       </div>
 
-      <!-- Carrossel de Cards dos Consultores com Scroll Horizontal -->
-      <div class="consultants-carousel-container">
-        <div class="carousel-header">
-          <span class="selection-label">Consultores em Disputa (clique para selecionar):</span>
-          <span class="carousel-hint"><i class="fa-solid fa-arrows-left-right"></i> Arraste para o lado</span>
+      <!-- Gráficos Visuais -->
+      <div class="grid-two-charts mt-3">
+        <div class="card chart-panel">
+          <div class="chart-panel-header">
+            <h4>
+              <i class="fa-solid fa-chart-column text-purple"></i> Produção vs
+              Efetivação por Consultor
+            </h4>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="graficoBarrasComparativo"></canvas>
+          </div>
         </div>
-        <div id="cardsConsultoresComparativo" class="consultants-cards-scroll"></div>
-      </div>
-    </section>
 
-    <!-- Cards de Destaque da Disputa -->
-    <div class="top-stats-row mt-3">
-      <div class="stat-box stat-highlight-green">
-        <span class="stat-label">Líder em Vendas</span>
-        <h3 id="cardLiderVendas">--</h3>
-        <small class="stat-sub" id="cardLiderVendasQtd">0 vendas efetivadas</small>
-      </div>
-      <div class="stat-box stat-highlight-purple">
-        <span class="stat-label">Melhor Conversão</span>
-        <h3 id="cardLiderConversao">--</h3>
-        <small class="stat-sub" id="cardLiderConversaoTaxa">0% de efetivação</small>
-      </div>
-      <div class="stat-box">
-        <span class="stat-label">Volume Efetivado do Grupo</span>
-        <h3 id="cardTotalGrupoEfetivadas">0</h3>
-        <small class="stat-sub" id="cardTotalGrupoLancadas">de 0 lançadas</small>
-      </div>
-      <div class="stat-box">
-        <span class="stat-label">Receita Gerada pelo Grupo</span>
-        <h3 id="cardReceitaGrupo">R$ 0,00</h3>
-        <small class="stat-sub">em contratos ativos</small>
-      </div>
-    </div>
-
-    <!-- Gráficos Visuais de Comparação -->
-    <div class="grid-two-charts mt-3">
-      
-      <!-- Gráfico 1: Produção vs Efetivação -->
-      <div class="card chart-panel">
-        <div class="chart-panel-header">
-          <h4><i class="fa-solid fa-chart-column text-purple"></i> Produção vs Efetivação por Consultor</h4>
-        </div>
-        <div class="chart-canvas-container">
-          <canvas id="graficoBarrasComparativo"></canvas>
-        </div>
-      </div>
-
-      <!-- Gráfico 2: Eficiência ou Duelo Direto -->
-      <div class="card chart-panel">
-        <div class="chart-panel-header">
-          <h4><i class="fa-solid fa-chart-line text-green"></i> Eficiência e Desempenho</h4>
-        </div>
-        <div class="chart-canvas-container">
-          <canvas id="graficoRadarComparativo"></canvas>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Tabela Comparativa Detalhada -->
-    <section class="card mt-4">
-      <div class="card-header flex-wrap">
-        <div class="header-title">
-          <i class="fa-solid fa-table-list text-yellow"></i>
-          <div>
-            <h2>Placar Geral de Confronto</h2>
-            <span class="subtitle-text" id="txtContagemComparativo">Exibindo 0 consultores</span>
+        <div class="card chart-panel">
+          <div class="chart-panel-header">
+            <h4>
+              <i class="fa-solid fa-chart-line text-green"></i> Eficiência e
+              Desempenho
+            </h4>
+          </div>
+          <div class="chart-canvas-container">
+            <canvas id="graficoRadarComparativo"></canvas>
           </div>
         </div>
       </div>
 
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Posição</th>
-              <th>Consultor</th>
-              <th>Vendas Lançadas</th>
-              <th>Efetivadas</th>
-              <th>Pendentes</th>
-              <th>Recusadas</th>
-              <th>Taxa de Conversão</th>
-              <th>Total Gerado (R$)</th>
-            </tr>
-          </thead>
-          <tbody id="corpoComparativo">
-            <tr><td colspan="8" class="loading">Carregando dados...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+      <!-- Tabela Comparativa Detalhada -->
+      <section class="card mt-4">
+        <div class="card-header flex-wrap">
+          <div class="header-title">
+            <i class="fa-solid fa-table-list text-yellow"></i>
+            <div>
+              <h2>Placar Geral de Confronto</h2>
+              <span class="subtitle-text" id="txtContagemComparativo"
+                >Exibindo 0 consultores</span
+              >
+            </div>
+          </div>
+        </div>
 
-  </main>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Posição</th>
+                <th>Consultor</th>
+                <th>Vendas Lançadas</th>
+                <th>Efetivadas</th>
+                <th>Pendentes</th>
+                <th>Recusadas</th>
+                <th>Taxa de Conversão</th>
+                <th>Total Gerado (R$)</th>
+              </tr>
+            </thead>
+            <tbody id="corpoComparativo">
+              <tr>
+                <td colspan="8" class="loading">Carregando dados...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="navbar.js"></script>
-  <script src="comparativo.js"></script>
-</body>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="navbar.js"></script>
+    <script src="comparativo.js"></script>
+  </body>
 </html>

@@ -1,272 +1,385 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Desempenho Individual - Ranking Vendas</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="theme-dracula">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Desempenho Individual - Ranking Vendas</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body class="theme-dracula">
+    <div id="navbar-container"></div>
 
-  <div id="navbar-container"></div>
-
-  <main class="dashboard-container">
-    
-    <div class="desempenho-main-grid">
-      
-      <!-- Coluna Esquerda: Perfil do Consultor e Frequência -->
-      <aside class="perfil-consultor-card">
-        <div class="perfil-topo-container">
-          <div class="perfil-avatar-wrapper">
-            <div class="perfil-avatar" id="avatarConsultorDisplay">
-              <i class="fa-solid fa-user-tie"></i>
+    <main class="dashboard-container">
+      <!-- Grid Duplo de Metas do Consultor / Equipe Selecionada -->
+      <div class="goals-dual-grid mb-3">
+        <section class="card goal-card">
+          <div class="goal-header">
+            <div class="goal-title-area">
+              <i class="fa-solid fa-sack-dollar text-purple"></i>
+              <div>
+                <h4>
+                  Meta em Faturamento (<span id="txtMesMetaDesempenhoFat"
+                    >Mês</span
+                  >)
+                </h4>
+                <span class="subtitle-text" id="txtSubMetaDesempenhoFat"
+                  >Progresso financeiro individual</span
+                >
+              </div>
             </div>
-            <span class="ranking-position-badge" id="badgePosicaoRanking">--º Lugar Geral</span>
-          </div>
-
-          <div class="perfil-info">
-            <h3 id="nomeConsultorDestaque">Todos os Consultores</h3>
-            <span class="cargo-tag">Consultor(a) de Vendas</span>
-          </div>
-
-          <div class="perfil-controls">
-            <div class="control-group">
-              <label for="filtroConsultorDesempenho"><i class="fa-solid fa-user"></i> Selecionar Consultor</label>
-              <select id="filtroConsultorDesempenho">
-                <option value="TODOS">Visão Geral da Equipe</option>
-              </select>
-            </div>
-
-            <div class="control-group">
-              <label for="filtroMesDesempenho"><i class="fa-solid fa-calendar-days"></i> Mês de Referência</label>
-              <select id="filtroMesDesempenho">
-                <option value="TODOS">Todo o Período</option>
-                <option value="0">Janeiro</option>
-                <option value="1">Fevereiro</option>
-                <option value="2">Março</option>
-                <option value="3">Abril</option>
-                <option value="4">Maio</option>
-                <option value="5">Junho</option>
-                <option value="6">Julho</option>
-                <option value="7">Agosto</option>
-                <option value="8">Setembro</option>
-                <option value="9">Outubro</option>
-                <option value="10">Novembro</option>
-                <option value="11">Dezembro</option>
-              </select>
+            <div class="goal-values">
+              <strong id="txtValorAtualMetaDesempenho" class="text-green"
+                >R$ 0,00</strong
+              >
+              <span class="goal-divider">/</span>
+              <span id="txtValorObjetivoMetaDesempenho" class="text-muted"
+                >R$ 0,00</span
+              >
+              <span class="badge badge-month" id="txtPercentualMetaDesempenho"
+                >0%</span
+              >
             </div>
           </div>
-        </div>
-
-        <!-- Frequência no Ciclo -->
-        <div class="frequencia-card-v2">
-          <div class="frequencia-header">
-            <i class="fa-solid fa-chart-line text-purple"></i>
-            <h4>Frequência no Ciclo</h4>
-          </div>
-
-          <div class="freq-list">
-            <div class="freq-row-item">
-              <div class="freq-icon-badge badge-podio">
-                <i class="fa-solid fa-trophy"></i>
-              </div>
-              <div class="freq-meta">
-                <span class="freq-title">Presença no Pódio</span>
-                <small class="freq-sub">Dias no Top 3 Geral</small>
-              </div>
-              <strong class="freq-value text-yellow" id="statPodioDias">0 dias</strong>
-            </div>
-
-            <div class="freq-row-item">
-              <div class="freq-icon-badge badge-ativos">
-                <i class="fa-solid fa-calendar-check"></i>
-              </div>
-              <div class="freq-meta">
-                <span class="freq-title">Dias Ativos</span>
-                <small class="freq-sub">Com venda registrada</small>
-              </div>
-              <strong class="freq-value text-green" id="statDiasAtivos">0 dias</strong>
-            </div>
-
-            <div class="freq-row-item">
-              <div class="freq-icon-badge badge-conversao">
-                <i class="fa-solid fa-bullseye"></i>
-              </div>
-              <div class="freq-meta">
-                <span class="freq-title">Conversão Efetiva</span>
-                <small class="freq-sub">Efetivadas / Lançadas</small>
-              </div>
-              <strong class="freq-value text-purple" id="statTaxaEfetiva">0%</strong>
-            </div>
-
-            <div class="freq-row-item">
-              <div class="freq-icon-badge badge-faturamento">
-                <i class="fa-solid fa-coins"></i>
-              </div>
-              <div class="freq-meta">
-                <span class="freq-title">Receita Média / Dia</span>
-                <small class="freq-sub">Por dia ativo</small>
-              </div>
-              <strong class="freq-value text-info" id="statReceitaMediaDia">R$ 0,00</strong>
+          <div class="progress-bar-container">
+            <div
+              class="progress-bar-fill fill-purple"
+              id="barraProgressoMetaDesempenho"
+              style="width: 0%"
+            >
+              <span class="progress-shine"></span>
             </div>
           </div>
-        </div>
-      </aside>
+        </section>
 
-      <!-- Coluna Direita: Métricas e Gráficos -->
-      <section class="desempenho-analytics-area">
-        
-        <!-- Top Cards de Performance -->
-        <div class="top-stats-row">
-          <div class="stat-box">
-            <span class="stat-label">Total no Período</span>
-            <h3 id="cardTotalLancadas">0</h3>
-            <small class="stat-sub" id="statTotalValor">R$ 0,00</small>
+        <section class="card goal-card">
+          <div class="goal-header">
+            <div class="goal-title-area">
+              <i class="fa-solid fa-bullseye text-green"></i>
+              <div>
+                <h4>
+                  Meta em Contratos (<span id="txtMesMetaDesempenhoQtd"
+                    >Mês</span
+                  >)
+                </h4>
+                <span class="subtitle-text" id="txtSubMetaDesempenhoQtd"
+                  >Progresso em volume</span
+                >
+              </div>
+            </div>
+            <div class="goal-values">
+              <strong id="txtQtdAtualMetaDesempenho" class="text-green"
+                >0</strong
+              >
+              <span class="goal-divider">/</span>
+              <span id="txtQtdObjetivoMetaDesempenho" class="text-muted"
+                >0 vendas</span
+              >
+              <span class="badge badge-date" id="txtPercentualMetaDesempenhoQtd"
+                >0%</span
+              >
+            </div>
           </div>
-          <div class="stat-box">
-            <span class="stat-label">Média por Dia Ativo</span>
-            <h3 id="statMediaDia">0.0</h3>
-            <small class="stat-sub">vendas / dia</small>
+          <div class="progress-bar-container">
+            <div
+              class="progress-bar-fill fill-green"
+              id="barraProgressoMetaDesempenhoQtd"
+              style="width: 0%"
+            >
+              <span class="progress-shine"></span>
+            </div>
           </div>
-          <div class="stat-box stat-highlight-green">
-            <span class="stat-label">Melhor Fechamento</span>
-            <h3 id="statMelhorFechamento">--/--</h3>
-            <small class="stat-sub" id="statMelhorQtd">0 vendas</small>
-          </div>
-          <div class="stat-box stat-highlight-red">
-            <span class="stat-label">Não Concluídas</span>
-            <h3 id="cardTotalRecusadas">0</h3>
-            <small class="stat-sub">recusadas no pós</small>
-          </div>
-        </div>
+        </section>
+      </div>
 
-        <!-- Gráfico de Volume de Vendas Diárias -->
-        <div class="card chart-panel">
-          <div class="chart-panel-header">
-            <h4><i class="fa-solid fa-chart-column text-purple"></i> Volume de Vendas Diárias</h4>
-          </div>
-          <div class="chart-canvas-container">
-            <canvas id="graficoVendasDiarias"></canvas>
-          </div>
-        </div>
+      <div class="desempenho-main-grid">
+        <!-- Coluna Esquerda: Perfil do Consultor e Frequência -->
+        <aside class="perfil-consultor-card">
+          <div class="perfil-topo-container">
+            <div class="perfil-avatar-wrapper">
+              <div class="perfil-avatar" id="avatarConsultorDisplay">
+                <i class="fa-solid fa-user-tie"></i>
+              </div>
+              <span class="ranking-position-badge" id="badgePosicaoRanking"
+                >--º Lugar Geral</span
+              >
+            </div>
 
-        <!-- Painel Inferior: Gráfico + Detalhamento -->
-        <div class="grid-two-charts">
+            <div class="perfil-info">
+              <h3 id="nomeConsultorDestaque">Todos os Consultores</h3>
+              <span class="cargo-tag">Consultor(a) de Vendas</span>
+            </div>
+
+            <div class="perfil-controls">
+              <div class="control-group">
+                <label for="filtroConsultorDesempenho"
+                  ><i class="fa-solid fa-user"></i> Selecionar Consultor</label
+                >
+                <select id="filtroConsultorDesempenho">
+                  <option value="TODOS">Visão Geral da Equipe</option>
+                </select>
+              </div>
+
+              <div class="control-group">
+                <label for="filtroMesDesempenho"
+                  ><i class="fa-solid fa-calendar-days"></i> Mês de
+                  Referência</label
+                >
+                <select id="filtroMesDesempenho">
+                  <option value="TODOS">Todo o Período</option>
+                  <option value="0">Janeiro</option>
+                  <option value="1">Fevereiro</option>
+                  <option value="2">Março</option>
+                  <option value="3">Abril</option>
+                  <option value="4">Maio</option>
+                  <option value="5">Junho</option>
+                  <option value="6">Julho</option>
+                  <option value="7">Agosto</option>
+                  <option value="8">Setembro</option>
+                  <option value="9">Outubro</option>
+                  <option value="10">Novembro</option>
+                  <option value="11">Dezembro</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="frequencia-card-v2">
+            <div class="frequencia-header">
+              <i class="fa-solid fa-chart-line text-purple"></i>
+              <h4>Frequência no Ciclo</h4>
+            </div>
+
+            <div class="freq-list">
+              <div class="freq-row-item">
+                <div class="freq-icon-badge badge-podio">
+                  <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div class="freq-meta">
+                  <span class="freq-title">Presença no Pódio</span>
+                  <small class="freq-sub">Dias no Top 3 Geral</small>
+                </div>
+                <strong class="freq-value text-yellow" id="statPodioDias"
+                  >0 dias</strong
+                >
+              </div>
+
+              <div class="freq-row-item">
+                <div class="freq-icon-badge badge-ativos">
+                  <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div class="freq-meta">
+                  <span class="freq-title">Dias Ativos</span>
+                  <small class="freq-sub">Com venda registrada</small>
+                </div>
+                <strong class="freq-value text-green" id="statDiasAtivos"
+                  >0 dias</strong
+                >
+              </div>
+
+              <div class="freq-row-item">
+                <div class="freq-icon-badge badge-conversao">
+                  <i class="fa-solid fa-bullseye"></i>
+                </div>
+                <div class="freq-meta">
+                  <span class="freq-title">Conversão Efetiva</span>
+                  <small class="freq-sub">Efetivadas / Lançadas</small>
+                </div>
+                <strong class="freq-value text-purple" id="statTaxaEfetiva"
+                  >0%</strong
+                >
+              </div>
+
+              <div class="freq-row-item">
+                <div class="freq-icon-badge badge-faturamento">
+                  <i class="fa-solid fa-coins"></i>
+                </div>
+                <div class="freq-meta">
+                  <span class="freq-title">Receita Média / Dia</span>
+                  <small class="freq-sub">Por dia ativo</small>
+                </div>
+                <strong class="freq-value text-info" id="statReceitaMediaDia"
+                  >R$ 0,00</strong
+                >
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Coluna Direita: Métricas e Gráficos -->
+        <section class="desempenho-analytics-area">
+          <div class="top-stats-row">
+            <div class="stat-box">
+              <span class="stat-label">Total no Período</span>
+              <h3 id="cardTotalLancadas">0</h3>
+              <small class="stat-sub" id="statTotalValor">R$ 0,00</small>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Média por Dia Ativo</span>
+              <h3 id="statMediaDia">0.0</h3>
+              <small class="stat-sub">vendas / dia</small>
+            </div>
+            <div class="stat-box stat-highlight-green">
+              <span class="stat-label">Melhor Fechamento</span>
+              <h3 id="statMelhorFechamento">--/--</h3>
+              <small class="stat-sub" id="statMelhorQtd">0 vendas</small>
+            </div>
+            <div class="stat-box stat-highlight-red">
+              <span class="stat-label">Não Concluídas</span>
+              <h3 id="cardTotalRecusadas">0</h3>
+              <small class="stat-sub">recusadas no pós</small>
+            </div>
+          </div>
+
           <div class="card chart-panel">
-            <h4><i class="fa-solid fa-chart-pie text-purple"></i> Proporção de Pagamento</h4>
-            <div class="chart-canvas-container-sm">
-              <canvas id="graficoPagamentos"></canvas>
+            <div class="chart-panel-header">
+              <h4>
+                <i class="fa-solid fa-chart-column text-purple"></i> Volume de
+                Vendas Diárias
+              </h4>
+            </div>
+            <div class="chart-canvas-container">
+              <canvas id="graficoVendasDiarias"></canvas>
             </div>
           </div>
 
-          <div class="card chart-panel">
-            <h4><i class="fa-solid fa-wallet text-green"></i> Pagamentos & Modalidades</h4>
-            <div class="stats-split-grid">
-              
-              <div class="split-col">
-                <span class="split-title">Meios de Pagamento</span>
-                <div class="pill-stat-item">
-                  <span class="pill pill-pag-credito">CRÉDITO</span>
-                  <strong id="cardQtdCredito">0</strong>
+          <div class="grid-two-charts">
+            <div class="card chart-panel">
+              <h4>
+                <i class="fa-solid fa-chart-pie text-purple"></i> Proporção de
+                Pagamento
+              </h4>
+              <div class="chart-canvas-container-sm">
+                <canvas id="graficoPagamentos"></canvas>
+              </div>
+            </div>
+
+            <div class="card chart-panel">
+              <h4>
+                <i class="fa-solid fa-wallet text-green"></i> Pagamentos &
+                Modalidades
+              </h4>
+              <div class="stats-split-grid">
+                <div class="split-col">
+                  <span class="split-title">Meios de Pagamento</span>
+                  <div class="pill-stat-item">
+                    <span class="pill pill-pag-credito">CRÉDITO</span>
+                    <strong id="cardQtdCredito">0</strong>
+                  </div>
+                  <div class="pill-stat-item">
+                    <span class="pill pill-pag-debito">DÉBITO</span>
+                    <strong id="cardQtdDebito">0</strong>
+                  </div>
+                  <div class="pill-stat-item">
+                    <span class="pill pill-pag-pix">PIX</span>
+                    <strong id="cardQtdPix">0</strong>
+                  </div>
+                  <div class="pill-stat-item">
+                    <span class="pill pill-pag-boleto">BOLETO / OUTROS</span>
+                    <strong id="cardQtdOutros">0</strong>
+                  </div>
                 </div>
-                <div class="pill-stat-item">
-                  <span class="pill pill-pag-debito">DÉBITO</span>
-                  <strong id="cardQtdDebito">0</strong>
-                </div>
-                <div class="pill-stat-item">
-                  <span class="pill pill-pag-pix">PIX</span>
-                  <strong id="cardQtdPix">0</strong>
-                </div>
-                <div class="pill-stat-item">
-                  <span class="pill pill-pag-boleto">BOLETO / OUTROS</span>
-                  <strong id="cardQtdOutros">0</strong>
+
+                <div class="split-col">
+                  <span class="split-title">Modalidades</span>
+                  <div class="pill-stat-item">
+                    <span class="pill pill-tipo-filiacao">FILIAÇÃO</span>
+                    <strong id="cardQtdFiliacao">0</strong>
+                  </div>
+                  <div class="pill-stat-item">
+                    <span class="pill pill-tipo-refiliacao">REFILIAÇÃO</span>
+                    <strong id="cardQtdRefiliacao">0</strong>
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
-              <div class="split-col">
-                <span class="split-title">Modalidades</span>
-                <div class="pill-stat-item">
-                  <span class="pill pill-tipo-filiacao">FILIAÇÃO</span>
-                  <strong id="cardQtdFiliacao">0</strong>
-                </div>
-                <div class="pill-stat-item">
-                  <span class="pill pill-tipo-refiliacao">REFILIAÇÃO</span>
-                  <strong id="cardQtdRefiliacao">0</strong>
-                </div>
-              </div>
+      <!-- Tabela de Histórico -->
+      <section class="card mt-4">
+        <div class="card-header flex-wrap">
+          <div class="header-title">
+            <i class="fa-solid fa-clock-rotate-left text-yellow"></i>
+            <div>
+              <h2>Histórico de Contratos</h2>
+              <span class="subtitle-text" id="txtContagemExibicao"
+                >Exibindo 0 de 0 contratos</span
+              >
+            </div>
+          </div>
 
+          <div class="filters-bar">
+            <div class="search-input-wrapper">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input
+                type="text"
+                id="buscaHistoricoInput"
+                placeholder="Buscar por cliente ou matrícula..."
+                class="compact-search-input"
+              />
             </div>
           </div>
         </div>
 
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Matrícula</th>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Consultor</th>
+                <th>Tipo</th>
+                <th>Pagamento</th>
+                <th>Status</th>
+                <th>Valor (R$)</th>
+              </tr>
+            </thead>
+            <tbody id="corpoTabelaDesempenho">
+              <tr>
+                <td colspan="8" class="loading">Carregando dados...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-footer mt-4">
+          <button
+            class="btn btn-secondary-sm"
+            id="btnRecolher10"
+            style="display: none"
+          >
+            <i class="fa-solid fa-compress"></i> Recolher p/ 10
+          </button>
+          <div class="pagination-actions">
+            <button class="btn btn-primary btn-sm" id="btnMostrarMais10">
+              <i class="fa-solid fa-plus"></i> Mostrar Mais 10
+            </button>
+            <button class="btn btn-secondary-sm" id="btnMostrarTodos">
+              <i class="fa-solid fa-angles-down"></i> Mostrar Todos (<span
+                id="txtQtdTotalBtn"
+                >0</span
+              >)
+            </button>
+          </div>
+        </div>
       </section>
+    </main>
 
-    </div>
-
-    <!-- Tabela de Histórico (10 Registros Iniciais) -->
-    <section class="card mt-4">
-      <div class="card-header flex-wrap">
-        <div class="header-title">
-          <i class="fa-solid fa-clock-rotate-left text-yellow"></i>
-          <div>
-            <h2>Histórico de Contratos</h2>
-            <span class="subtitle-text" id="txtContagemExibicao">Exibindo 0 de 0 contratos</span>
-          </div>
-        </div>
-
-        <div class="filters-bar">
-          <div class="search-input-wrapper">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="buscaHistoricoInput" placeholder="Buscar por cliente ou matrícula..." class="compact-search-input" />
-          </div>
-        </div>
-      </div>
-
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Matrícula</th>
-              <th>Cliente</th>
-              <th>Data</th>
-              <th>Consultor</th>
-              <th>Tipo</th>
-              <th>Pagamento</th>
-              <th>Status</th>
-              <th>Valor (R$)</th>
-            </tr>
-          </thead>
-          <tbody id="corpoTabelaDesempenho">
-            <tr><td colspan="8" class="loading">Carregando dados...</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Paginação de 10 em 10 -->
-      <div class="pagination-footer mt-4">
-        <button class="btn btn-secondary-sm" id="btnRecolher10" style="display: none;">
-          <i class="fa-solid fa-compress"></i> Recolher p/ 10
-        </button>
-        <div class="pagination-actions">
-          <button class="btn btn-primary btn-sm" id="btnMostrarMais10">
-            <i class="fa-solid fa-plus"></i> Mostrar Mais 10
-          </button>
-          <button class="btn btn-secondary-sm" id="btnMostrarTodos">
-            <i class="fa-solid fa-angles-down"></i> Mostrar Todos (<span id="txtQtdTotalBtn">0</span>)
-          </button>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="navbar.js"></script>
-  <script src="desempenho.js"></script>
-</body>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="navbar.js"></script>
+    <script src="desempenho.js"></script>
+  </body>
 </html>

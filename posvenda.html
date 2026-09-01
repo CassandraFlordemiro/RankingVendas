@@ -1,135 +1,158 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pós-Venda - Aferição de Contratos</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-</head>
-<body class="theme-dracula">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pós-Venda - Aferição de Contratos</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  </head>
+  <body class="theme-dracula">
+    <div id="navbar-container"></div>
 
-  <div id="navbar-container"></div>
-
-  <main class="dashboard-container">
-    
-    <!-- Métricas Operacionais do Pós-Venda -->
-    <div class="metrics-grid">
-      <div class="metric-card metric-warning">
-        <div class="metric-icon"><i class="fa-solid fa-clock"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Pendentes na Fila</span>
-          <h3 id="statPendentes">0</h3>
-        </div>
-      </div>
-
-      <div class="metric-card metric-success">
-        <div class="metric-icon"><i class="fa-solid fa-circle-check"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Concluídas / Efetivadas</span>
-          <h3 id="statConcluidas">0</h3>
-        </div>
-      </div>
-
-      <div class="metric-card metric-danger">
-        <div class="metric-icon"><i class="fa-solid fa-circle-xmark"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Recusadas / Canceladas</span>
-          <h3 id="statRecusadas">0</h3>
-        </div>
-      </div>
-
-      <div class="metric-card metric-primary">
-        <div class="metric-icon"><i class="fa-solid fa-percent"></i></div>
-        <div class="metric-info">
-          <span class="metric-label">Taxa de Conversão Pós</span>
-          <h3 id="statConversao">0%</h3>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tabela de Tratativas com Controles Operacionais -->
-    <section class="card">
-      <div class="card-header flex-wrap">
-        <div class="header-title">
-          <i class="fa-solid fa-headset text-purple"></i>
-          <div>
-            <h2>Gestão de Tratativas e Confirmação</h2>
-            <span class="subtitle-text" id="txtContagemPos">Exibindo 0 de 0 contratos</span>
+    <main class="dashboard-container">
+      <!-- Métricas Operacionais do Pós-Venda -->
+      <div class="metrics-grid">
+        <div class="metric-card metric-warning">
+          <div class="metric-icon"><i class="fa-solid fa-clock"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Pendentes na Fila</span>
+            <h3 id="statPendentes">0</h3>
           </div>
         </div>
 
-        <div class="filters-bar">
-          <div class="search-input-wrapper">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="filtroBusca" placeholder="Buscar por cliente ou matrícula..." class="compact-search-input" />
+        <div class="metric-card metric-success">
+          <div class="metric-icon">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div class="metric-info">
+            <span class="metric-label">Concluídas / Efetivadas</span>
+            <h3 id="statConcluidas">0</h3>
+          </div>
+        </div>
+
+        <div class="metric-card metric-danger">
+          <div class="metric-icon">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </div>
+          <div class="metric-info">
+            <span class="metric-label">Recusadas / Canceladas</span>
+            <h3 id="statRecusadas">0</h3>
+          </div>
+        </div>
+
+        <div class="metric-card metric-primary">
+          <div class="metric-icon"><i class="fa-solid fa-percent"></i></div>
+          <div class="metric-info">
+            <span class="metric-label">Taxa de Conversão Pós</span>
+            <h3 id="statConversao">0%</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela de Tratativas com Controles Operacionais -->
+      <section class="card">
+        <div class="card-header flex-wrap">
+          <div class="header-title">
+            <i class="fa-solid fa-headset text-purple"></i>
+            <div>
+              <h2>Gestão de Tratativas e Confirmação</h2>
+              <span class="subtitle-text" id="txtContagemPos"
+                >Exibindo 0 de 0 contratos</span
+              >
+            </div>
           </div>
 
-          <select id="filtroConsultorPos" style="width: 190px;">
-            <option value="TODOS">Todos os Consultores</option>
-          </select>
+          <div class="filters-bar">
+            <div class="search-input-wrapper">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input
+                type="text"
+                id="filtroBusca"
+                placeholder="Buscar por cliente ou matrícula..."
+                class="compact-search-input"
+              />
+            </div>
 
-          <select id="filtroStatus" style="width: 170px;">
-            <option value="PENDENTE">Pendentes / Em Tratativa</option>
-            <option value="TODOS">Todos os Status</option>
-            <option value="CONCLUÍDO">Concluídos</option>
-            <option value="NÃO CONCLUÍDO">Não Concluídos / Recusados</option>
-          </select>
+            <select id="filtroConsultorPos" style="width: 190px">
+              <option value="TODOS">Todos os Consultores</option>
+            </select>
 
-          <button class="btn btn-success btn-sm" id="btnExportarPlanilha">
-            <i class="fa-solid fa-file-excel"></i> Exportar Planilha
-          </button>
+            <select id="filtroStatus" style="width: 170px">
+              <option value="PENDENTE">Pendentes / Em Tratativa</option>
+              <option value="TODOS">Todos os Status</option>
+              <option value="CONCLUÍDO">Concluídos</option>
+              <option value="NÃO CONCLUÍDO">Não Concluídos / Recusados</option>
+            </select>
+
+            <button class="btn btn-success btn-sm" id="btnExportarPlanilha">
+              <i class="fa-solid fa-file-excel"></i> Exportar Planilha
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Matrícula</th>
-              <th>Cliente</th>
-              <th>Data</th>
-              <th>Consultor</th>
-              <th>Tipo</th>
-              <th>Pagamento</th>
-              <th class="text-center">1. Ligação</th>
-              <th class="text-center">2. Link</th>
-              <th class="text-center">3. Documentos</th>
-              <th>Status Geral</th>
-              <th>Observação do Pós</th>
-              <th class="text-center">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="corpoPosVenda">
-            <tr><td colspan="12" class="loading">Carregando tratativas...</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Paginação de 10 em 10 -->
-      <div class="pagination-footer mt-4">
-        <button class="btn btn-secondary-sm" id="btnRecolher10" style="display: none;">
-          <i class="fa-solid fa-compress"></i> Recolher p/ 10
-        </button>
-        <div class="pagination-actions">
-          <button class="btn btn-primary btn-sm" id="btnMostrarMais10">
-            <i class="fa-solid fa-plus"></i> Mostrar Mais 10
-          </button>
-          <button class="btn btn-secondary-sm" id="btnMostrarTodos">
-            <i class="fa-solid fa-angles-down"></i> Mostrar Todos (<span id="txtQtdTotalBtn">0</span>)
-          </button>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Matrícula</th>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Consultor</th>
+                <th>Tipo</th>
+                <th>Pagamento</th>
+                <th class="text-center">1. Ligação</th>
+                <th class="text-center">2. Link</th>
+                <th class="text-center">3. Documentos</th>
+                <th>Status Geral</th>
+                <th>Observação do Pós</th>
+                <th class="text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="corpoPosVenda">
+              <tr>
+                <td colspan="12" class="loading">Carregando tratativas...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
-    </section>
 
-  </main>
+        <!-- Paginação de 10 em 10 -->
+        <div class="pagination-footer mt-4">
+          <button
+            class="btn btn-secondary-sm"
+            id="btnRecolher10"
+            style="display: none"
+          >
+            <i class="fa-solid fa-compress"></i> Recolher p/ 10
+          </button>
+          <div class="pagination-actions">
+            <button class="btn btn-primary btn-sm" id="btnMostrarMais10">
+              <i class="fa-solid fa-plus"></i> Mostrar Mais 10
+            </button>
+            <button class="btn btn-secondary-sm" id="btnMostrarTodos">
+              <i class="fa-solid fa-angles-down"></i> Mostrar Todos (<span
+                id="txtQtdTotalBtn"
+                >0</span
+              >)
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
 
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="navbar.js"></script>
-  <script src="posvenda.js"></script>
-</body>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="navbar.js"></script>
+    <script src="posvenda.js"></script>
+  </body>
 </html>
